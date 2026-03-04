@@ -1,0 +1,423 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Email Service",
+    "version": "1.0.0",
+    "description": "Internal microservice for sending transactional emails. Supports idempotent delivery via the `Idempotency-Key` header and persists every send attempt to the `email_history` audit table."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local development"
+    }
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "operationId": "getHealth",
+        "responses": {
+          "200": {
+            "description": "Service is healthy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                },
+                "example": {
+                  "status": "ok"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/send": {
+      "post": {
+        "summary": "Send a transactional email",
+        "operationId": "sendEmail",
+        "description": "Renders a registered email template with the supplied `data` payload and dispatches it via SMTP.\n\nSupply an `Idempotency-Key` (UUID) header to make the call idempotent: subsequent requests with the same key return the cached outcome without re-sending.",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": false,
+            "description": "Caller-supplied UUID. If a previous request with this key already succeeded the cached `200` response is returned immediately. If it failed, a `422` is returned with the original error.",
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "example": "01956e3d-0000-7000-8000-000000000001"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendEmailRequest"
+              },
+              "examples": {
+                "welcome": {
+                  "summary": "Welcome email",
+                  "value": {
+                    "to": "alice@example.com",
+                    "type": "welcome",
+                    "data": {
+                      "name": "Alice"
+                    }
+                  }
+                },
+                "order_confirmation": {
+                  "summary": "Order confirmation with CC and attachment",
+                  "value": {
+                    "to": "alice@example.com",
+                    "cc": "manager@example.com",
+                    "type": "order_confirmation",
+                    "data": {
+                      "customerName": "Alice",
+                      "orderId": "ord_abc123",
+                      "propertyName": "Ocean View Villa",
+                      "checkIn": "2026-06-01",
+                      "checkOut": "2026-06-07",
+                      "totalAmount": 1200
+                    },
+                    "attachments": [
+                      {
+                        "source": "inline",
+                        "filename": "invoice.pdf",
+                        "content": "JVBERi0x...",
+                        "encoding": "base64",
+                        "contentType": "application/pdf"
+                      }
+                    ],
+                    "tags": [
+                      "transactional"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Email sent (or replayed from idempotency cache)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendEmailSuccess"
+                },
+                "example": {
+                  "success": true,
+                  "messageId": "<abc123@smtp.gmail.com>"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request — JSON parse failure, schema validation error, invalid `Idempotency-Key` format, or unresolvable attachment URL",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "oneOf": [
+                    { "$ref": "#/components/schemas/ErrorResponse" },
+                    { "$ref": "#/components/schemas/ValidationErrorResponse" },
+                    { "$ref": "#/components/schemas/AttachmentFetchErrorResponse" }
+                  ]
+                },
+                "examples": {
+                  "invalid_json": {
+                    "value": { "error": "Invalid JSON body" }
+                  },
+                  "validation_failed": {
+                    "value": {
+                      "error": "Request validation failed",
+                      "issues": {
+                        "formErrors": [],
+                        "fieldErrors": {
+                          "to": ["Invalid email"]
+                        }
+                      }
+                    }
+                  },
+                  "invalid_idempotency_key": {
+                    "value": { "error": "Idempotency-Key must be a valid UUID" }
+                  },
+                  "attachment_fetch_failed": {
+                    "value": {
+                      "error": "Failed to fetch attachment from URL",
+                      "url": "https://storage.example.com/missing.pdf"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Unknown email type — not registered in `templates.toml`",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "error": "Unknown email type: \"invoice\". Check templates.toml for registered types."
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Idempotency key matched a previous **failed** send attempt",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "example": {
+                  "error": "SMTP connection refused"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Internal server error — SMTP failure or template render error",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ErrorResponse" },
+                "examples": {
+                  "smtp_error": {
+                    "value": { "error": "Failed to send email" }
+                  },
+                  "render_error": {
+                    "value": { "error": "Failed to render email template" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthResponse": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["ok"]
+          }
+        }
+      },
+      "EmailAddressField": {
+        "description": "A single email address or a non-empty array of email addresses",
+        "oneOf": [
+          {
+            "type": "string",
+            "format": "email",
+            "example": "alice@example.com"
+          },
+          {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "email"
+            },
+            "minItems": 1,
+            "example": ["alice@example.com", "bob@example.com"]
+          }
+        ]
+      },
+      "InlineAttachment": {
+        "type": "object",
+        "required": ["source", "filename", "content", "contentType"],
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": ["inline"]
+          },
+          "filename": {
+            "type": "string",
+            "minLength": 1,
+            "example": "invoice.pdf"
+          },
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "description": "File content encoded as a string (base64 by default)",
+            "example": "JVBERi0xLjQ..."
+          },
+          "encoding": {
+            "type": "string",
+            "enum": ["base64", "utf-8"],
+            "default": "base64"
+          },
+          "contentType": {
+            "type": "string",
+            "minLength": 1,
+            "example": "application/pdf"
+          }
+        }
+      },
+      "UrlAttachment": {
+        "type": "object",
+        "required": ["source", "filename", "url", "contentType"],
+        "properties": {
+          "source": {
+            "type": "string",
+            "enum": ["url"]
+          },
+          "filename": {
+            "type": "string",
+            "minLength": 1,
+            "example": "terms.pdf"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://storage.example.com/terms.pdf"
+          },
+          "contentType": {
+            "type": "string",
+            "minLength": 1,
+            "example": "application/pdf"
+          }
+        }
+      },
+      "Attachment": {
+        "description": "An email attachment — either inline (base64/utf-8 encoded content) or fetched from a URL at send time",
+        "oneOf": [
+          { "$ref": "#/components/schemas/InlineAttachment" },
+          { "$ref": "#/components/schemas/UrlAttachment" }
+        ],
+        "discriminator": {
+          "propertyName": "source",
+          "mapping": {
+            "inline": "#/components/schemas/InlineAttachment",
+            "url": "#/components/schemas/UrlAttachment"
+          }
+        }
+      },
+      "SendEmailRequest": {
+        "type": "object",
+        "required": ["to", "type"],
+        "properties": {
+          "to": {
+            "$ref": "#/components/schemas/EmailAddressField",
+            "description": "Primary recipient(s)"
+          },
+          "cc": {
+            "$ref": "#/components/schemas/EmailAddressField",
+            "description": "CC recipient(s)"
+          },
+          "bcc": {
+            "$ref": "#/components/schemas/EmailAddressField",
+            "description": "BCC recipient(s)"
+          },
+          "replyTo": {
+            "type": "string",
+            "format": "email",
+            "description": "Reply-To address",
+            "example": "support@example.com"
+          },
+          "type": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Email template key registered in `templates.toml` (e.g. `welcome`, `order_confirmation`, `password_reset`)",
+            "example": "welcome"
+          },
+          "data": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "Template-specific payload. Validated against the template's Zod schema before rendering.",
+            "example": { "name": "Alice" }
+          },
+          "attachments": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Attachment" },
+            "default": [],
+            "description": "Optional list of file attachments"
+          },
+          "headers": {
+            "type": "object",
+            "additionalProperties": { "type": "string" },
+            "default": {},
+            "description": "Additional SMTP headers to include in the outgoing message",
+            "example": { "X-Campaign-ID": "spring-2026" }
+          },
+          "tags": {
+            "type": "array",
+            "items": { "type": "string" },
+            "default": [],
+            "description": "Arbitrary string tags attached as `X-Tag-N` headers",
+            "example": ["transactional", "welcome"]
+          }
+        }
+      },
+      "SendEmailSuccess": {
+        "type": "object",
+        "required": ["success", "messageId"],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [true]
+          },
+          "messageId": {
+            "type": "string",
+            "description": "SMTP Message-ID returned by the transport (or the cached value on an idempotent replay)",
+            "example": "<abc123@smtp.gmail.com>"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": ["error"],
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        }
+      },
+      "ValidationErrorResponse": {
+        "type": "object",
+        "required": ["error", "issues"],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "issues": {
+            "type": "object",
+            "description": "Zod flattened error shape",
+            "properties": {
+              "formErrors": {
+                "type": "array",
+                "items": { "type": "string" }
+              },
+              "fieldErrors": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "AttachmentFetchErrorResponse": {
+        "type": "object",
+        "required": ["error", "url"],
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "description": "The URL that could not be fetched"
+          }
+        }
+      }
+    }
+  }
+}
