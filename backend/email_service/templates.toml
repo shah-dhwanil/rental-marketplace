@@ -1,0 +1,16 @@
+# Email template mappings
+# Each key is the email "type" name that API consumers use.
+# component = name of the exported React component (must match registry key)
+# subject   = default email subject line
+
+[welcome]
+component = "WelcomeEmail"
+subject = "Welcome to Rental Marketplace"
+
+[order_confirmation]
+component = "OrderConfirmationEmail"
+subject = "Your Order Confirmation"
+
+[password_reset]
+component = "PasswordResetEmail"
+subject = "Reset Your Password"
