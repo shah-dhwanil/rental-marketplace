@@ -1,0 +1,219 @@
+Table users{
+  id uuid [pk]
+  name varchar(32) [not null]
+  email_id varchar(64) [not null]
+  mobile_no varchar(15) [not null]
+  password varcahr(255) [not null]
+  type varchar(32) [not null]
+  is_verified bool [default: false]
+  is_active bool [default: true]
+  is_profile_complete bool [default: false]
+  is_deleted bool [default: false]
+  created_at datetime [default: `now`]
+  updated_at datetime [default: `now`]
+}
+
+Table customers{
+  id uuid [pk, ref:- users.id]
+  loyalty_points int [not null, default:0]
+}
+
+Table address {
+  id uuid [pk]
+  user_id uuid [ref:> customers.id, not null]
+  name varchar(16) [not null]
+  person_name varchar(32) [not null]
+  contact_no varchar(15) [not null]
+  address text [not null]
+  city varchar(64) [not null]
+  pincode varchar(6) [not null]
+  location GEOGRAPHY(Point) [not null]
+  is_deleted bool [default: false]
+  created_at datetime [default: `now`]
+  updated_at datetime [default: `now`]
+}
+
+Table stored_payment_methods{
+  id uuid [pk]
+  user_id uuid [ref:> customers.id, not null]
+  type varchar(32) [not null]
+  details JSONB [not null]
+  is_deleted bool [default: false]
+  created_at datetime [default: `now`]
+  updated_at datetime [default: `now`]
+}
+
+Table vendors{
+  id uuid [pk, ref:- users.id]
+  name varchar(255) [not null]
+  gst_no varchar(15) [not null]
+  address text [not null]
+  city varchar(64) [not null]
+  pincode varchar(6) [not null]
+  location GEOGRAPHY(Point) [not null]
+  bank_details JSON [not null]
+  is_verified bool [default: false]
+  is_active bool [default: true]
+  is_deleted bool [default: false]
+  created_at datetime [default: `now`]
+  updated_at datetime [default: `now`]
+}
+
+Table delivery_partners{
+  id uuid [pk,ref:- users.id]
+  name varchar(32) [not null]
+  gst_no varchar(15) [not null]
+  address text [not null]
+  city varchar(64) [not null]
+  pincode varchar(6) [not null]
+  location GEOGRAPHY(Point) [not null]
+  bank_details JSON [not null]
+  is_verified bool [default: true]
+  is_active bool [default: true]
+  is_deleted bool [default: false]
+  created_at datetime [default: `now`]
+  updated_at datetime [default: `now`]
+}
+
+Table categories{
+  id uuid [pk]
+  name varchar(32) [not null, unique]
+  description text [not null]
+  parent_category_id uuid [ref:> categories.id]
+  is_deleted bool [default: false]
+  created_at datetime [default: `now`]
+  updated_at datetime [default: `now`]
+}
+
+Table products{
+  id uuid [pk]
+  name varchar(32) [not null]
+  description text [not null]
+  properties JSONB [not null]
+  images JSONB [not null]
+  reserved_qty int [default: 0]
+  category_id uuid [ref:> categories.id, not null]
+  vendor_id uuid [ref:> vendors.id,not null]
+  price_day numeric(10,2) [not null]
+  price_week numeric(10,2) [not null]
+  price_month numeric(10,2) [not null]
+  security_deposit numeric(10,2) [not null]
+  defect_charge numeric(10,2) [not null]
+  is_active bool [default: true]
+  is_deleted bool [default: false]
+  created_at datetime [default: `now`]
+  updated_at datetime [default: `now`]
+}
+
+Table devices{
+  id uuid [pk]
+  product_id uuid [ref:> products.id,not null]
+  condition varchar(16) [not null]
+  properties JSONB [not null]
+  is_active bool [default: true]
+  is_deleted bool [default: false]
+  created_at datetime [default: `now`]
+  updated_at datetime [default: `now`]
+}
+
+Table promo_codes {
+  id uuid [pk]
+  code varchar(32) [not null, unique]
+  discount_type varchar(16) [not null] // 'percentage', 'fixed'
+  discount_value numeric(10,2) [not null]
+  min_order_value numeric(10,2)
+  max_discount numeric(10,2)
+  valid_from datetime [not null]
+  valid_until datetime [not null]
+  is_active bool [default: true]
+  is_deleted bool [default: false]
+  created_at datetime [default: `now`]
+  updated_at datetime [default: `now`]
+}
+
+Table orders{
+  id uuid [pk]
+  customer_id uuid [ref:> customers.id, not null]
+  product_id uuid [ref:> products.id,not null]
+  vendor_id uuid [ref:> vendors.id, not null]
+  address_id uuid [ref:> address.id,not null]
+  qty int [not null]
+  start_date date [not null]
+  end_date date [not null]
+  pickup_date date [not null]
+  return_date date [not null]
+  delivery_type varchar(16) [not null]
+  ratings int []
+  promo_code_applied uuid [ref:> promo_codes.id]
+  security_deposit numeric(10,2) [not null]
+  amount numeric(10,2) [not null]
+  discount numeric(10,2) [not null]
+  net_amount numeric(10,2) [not null]
+  cgst_amount numeric(10,2) [not null]
+  sgst_amount numeric(10,2) [not null]
+  damage_amount numeric(10,2) [not null]
+  grand_total numeric(10,2) [not null]
+  status varcahr(16) [not null]
+  created_at datetime [default: `now`]
+  updated_at datetime [default: `now`]
+}
+
+Table order_devices{
+  order_id uuid [pk, ref:> orders.id]
+  device_id uuid [pk, ref:> devices.id]
+  drop_photo_id uuid[] [not null]
+  pickup_photo_id uuid[] [not null]
+  created_at datetime [default: `now`]
+  updated_at datetime [default: `now`]
+}
+
+Table order_status_history {
+  order_id uuid [pk, ref:> orders.id]
+  status varchar(16) [pk, not null]
+  created_at datetime [default: `now`]
+}
+
+Table payments{
+  id uuid [pk]
+  customer_id uuid [ref:> customers.id,not null]
+  order_id uuid [ref:> orders.id,not null]
+  transaction_id varchar(255) [not null]
+  payment_type varchar(32) [not null] // 'security_deposit', 'rental', 'damage', 'refund'
+  payment_method varchar(32) [not null]
+  amount numeric(10,2) [not null]
+  status varchar(16) [not null]
+  gateway_response JSONB []
+  created_at datetime [default: `now`]
+  updated_at datetime [default: `now`]
+}
+
+Table deliveries{
+  order_id uuid [pk,ref:>orders.id]
+  type varchar(16) [pk]
+  partner_id uuid [ref:> delivery_partners.id]
+  scheduled_at date [not null]
+  performed_at datetime [not null]
+  note text
+  ratings int [null]
+  is_deleted bool [default: false]
+  created_at datetime [default: `now`]
+  updated_at datetime [default: `now`]
+}
+
+Table reviews {
+  id uuid [pk]
+  order_id uuid [ref:> orders.id, not null]
+  customer_id uuid [ref:> customers.id, not null]
+  review_text text
+  images JSONB
+  is_deleted bool [default: false]
+  created_at datetime [default: `now`]
+  updated_at datetime [default: `now`]
+}
+
+Table wishlists {
+  customer_id uuid [pk, ref:> customers.id]
+  product_id uuid [pk, ref:> products.id]
+  created_at datetime [default: `now`]
+}
+

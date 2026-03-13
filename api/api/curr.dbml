@@ -1,0 +1,51 @@
+Table users{
+  id uuid [pk]
+  name varchar(32) [not null]
+  email_id varchar(64) [not null]
+  mobile_no varchar(15) [not null]
+  password varcahr(255) [not null]
+  role varchar(32) [not null]
+  is_verified bool [default: false]
+  is_active bool [default: true]
+  is_profile_complete bool [default: false]
+  is_deleted bool [default: false]
+  created_at datetime [default: `now`]
+  updated_at datetime [default: `now`]
+}
+
+Table customers{
+  id uuid [pk, ref:- users.id]
+  loyalty_points int [not null, default:0]
+}
+
+Table vendors{
+  id uuid [pk, ref:- users.id]
+  name varchar(255) [not null]
+  gst_no varchar(15) [not null]
+  address text [not null]
+  city varchar(64) [not null]
+  pincode varchar(6) [not null]
+  location GEOGRAPHY(Point) [not null]
+  bank_details JSON [not null]
+  is_verified bool [default: false]
+  is_active bool [default: true]
+  is_deleted bool [default: false]
+  created_at datetime [default: `now`]
+  updated_at datetime [default: `now`]
+}
+
+Table delivery_partners{
+  id uuid [pk,ref:- users.id]
+  name varchar(32) [not null]
+  gst_no varchar(15) [not null]
+  address text [not null]
+  city varchar(64) [not null]
+  pincode varchar(6) [not null]
+  location GEOGRAPHY(Point) [not null]
+  bank_details JSON [not null]
+  is_verified bool [default: true]
+  is_active bool [default: true]
+  is_deleted bool [default: false]
+  created_at datetime [default: `now`]
+  updated_at datetime [default: `now`]
+}
