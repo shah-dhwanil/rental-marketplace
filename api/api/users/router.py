@@ -2,7 +2,7 @@
 Users router — all HTTP endpoints for the users domain.
 """
 
-from typing import Optional
+from typing import Optional, Union
 
 from fastapi import APIRouter, File, Query, UploadFile, status
 
@@ -116,7 +116,7 @@ async def dp_step3(
 # Auth
 # ---------------------------------------------------------------------------
 
-@router.post("/auth/login", response_model=TokenResponse, summary="Login")
+@router.post("/auth/login", response_model=Union[TokenResponse, TempTokenResponse], summary="Login")
 async def login(body: LoginRequest, service: UserServiceDep):
     return await service.login(body)
 

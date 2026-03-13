@@ -1,4 +1,4 @@
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useState, useEffect, type FormEvent, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router";
 import { Eye, EyeOff, Truck, Landmark, CheckCircle, ChevronRight } from "lucide-react";
 import { z } from "zod";
@@ -43,14 +43,22 @@ const highlights = [
 
 export function DeliveryPartnerSignupPage() {
   const navigate = useNavigate();
-  const { setTokens } = useAuthStore();
+  const { setTokens, tempToken: storeTempToken, registrationStep, clearRegistrationStep } = useAuthStore();
 
-  const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [tempToken, setTempToken] = useState<string | null>(null);
+  const resumeStep = (registrationStep === 2 || registrationStep === 3) ? registrationStep : 1;
+  // Capture isResuming at mount time so the banner persists after store is cleared
+  const [isResuming] = useState(resumeStep > 1);
+
+  const [step, setStep] = useState<1 | 2 | 3>(resumeStep);
+  const [tempToken, setTempToken] = useState<string | null>(isResuming ? storeTempToken : null);
   const [isLoading, setIsLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (registrationStep) clearRegistrationStep();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Step 1 state ────────────────────────────────────────────────────────────
   const [s1, setS1] = useState({ name: "", email_id: "", mobile_no: "", password: "", confirm_password: "" });
@@ -169,12 +177,23 @@ export function DeliveryPartnerSignupPage() {
           <span>🚚</span> Delivery Partner
         </div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-          Join as Delivery Partner
+          {isResuming ? "Complete Your Registration" : "Join as Delivery Partner"}
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Already have one?{" "}
-          <Link to="/login" className="text-primary font-medium hover:underline">Sign in</Link>
+          {isResuming ? "Pick up where you left off." : (
+            <>
+              Already have one?{" "}
+              <Link to="/login/delivery-partner" className="text-primary font-medium hover:underline">Sign in</Link>
+            </>
+          )}
         </p>
+        {isResuming && (
+          <div className="mt-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 px-3 py-2">
+            <p className="text-xs text-amber-700 dark:text-amber-300">
+              Your account was created. Complete the remaining steps to activate your delivery partner profile.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Step indicator */}

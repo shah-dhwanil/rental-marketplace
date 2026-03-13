@@ -117,7 +117,7 @@ export function CustomerSignupPage() {
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
           Already have one?{" "}
-          <Link to="/login" className="text-primary font-medium hover:underline">
+          <Link to="/login/customer" className="text-primary font-medium hover:underline">
             Sign in
           </Link>
         </p>

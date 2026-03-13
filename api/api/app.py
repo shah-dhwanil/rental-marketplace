@@ -14,6 +14,8 @@ from api.middleware import ContextMiddleware, LoggingMiddleware, RequestIDMiddle
 from api.models.errors import HTTPException
 from api.settings import get_settings
 from api.users.router import router as users_router
+from api.categories.router import router as categories_router
+from api.products.router import router as products_router
 
 # Load settings
 settings = get_settings()
@@ -57,6 +59,8 @@ def create_app() -> FastAPI:
 
     # Include routers here
     app.include_router(users_router)
+    app.include_router(categories_router)
+    app.include_router(products_router)
     return app
 
 

@@ -7,6 +7,7 @@ import { apiFetch } from "@/lib/api";
 import {
   TokenResponseSchema,
   TempTokenResponseSchema,
+  LoginResponseSchema,
   MeResponseSchema,
   type LoginForm,
   type RegisterStep1Form,
@@ -14,12 +15,13 @@ import {
   type Step3Form,
   type TokenResponse,
   type TempTokenResponse,
+  type LoginResponse,
   type MeResponse,
 } from "@/schemas/auth.schema";
 
 // ── Login ─────────────────────────────────────────────────────────────────────
 
-export async function login(data: LoginForm): Promise<TokenResponse> {
+export async function login(data: LoginForm): Promise<LoginResponse> {
   const raw = await apiFetch<unknown>("/users/auth/login", {
     method: "POST",
     body: JSON.stringify({
@@ -28,7 +30,7 @@ export async function login(data: LoginForm): Promise<TokenResponse> {
       role: data.role,
     }),
   });
-  return TokenResponseSchema.parse(raw);
+  return LoginResponseSchema.parse(raw);
 }
 
 // ── Registration — Step 1 (all roles) ─────────────────────────────────────────

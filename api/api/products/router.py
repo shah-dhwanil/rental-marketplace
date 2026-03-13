@@ -1,0 +1,180 @@
+"""Products and Devices router."""
+
+from typing import Optional
+
+from fastapi import APIRouter, File, Query, UploadFile, status
+
+from api.models.pagination import PaginatedResponse
+from api.products.dependencies import ProductServiceDep, VendorDep
+from api.products.models.requests import (
+    CreateDeviceRequest,
+    CreateProductRequest,
+    UpdateDeviceRequest,
+    UpdateProductRequest,
+)
+from api.products.models.responses import DeviceResponse, ProductResponse, ProductSummaryResponse
+
+router = APIRouter(tags=["Products & Devices"])
+
+
+# ---------------------------------------------------------------------------
+# Products
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/api/v1/products",
+    response_model=PaginatedResponse[ProductSummaryResponse],
+    summary="List products (public)",
+)
+async def list_products(
+    service: ProductServiceDep,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    category_id: Optional[str] = Query(default=None),
+    is_active: Optional[bool] = Query(default=None),
+    q: Optional[str] = Query(default=None, max_length=100),
+):
+    return await service.list_products(page, page_size, category_id=category_id, is_active=is_active, q=q)
+
+
+@router.get(
+    "/api/v1/products/vendor/me",
+    response_model=PaginatedResponse[ProductSummaryResponse],
+    summary="Vendor — List own products",
+)
+async def list_my_products(
+    claims: VendorDep,
+    service: ProductServiceDep,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    category_id: Optional[str] = Query(default=None),
+    is_active: Optional[bool] = Query(default=None),
+    q: Optional[str] = Query(default=None, max_length=100),
+):
+    return await service.list_products(
+        page, page_size, vendor_id=claims.user_id, category_id=category_id, is_active=is_active, q=q
+    )
+
+
+@router.get(
+    "/api/v1/products/{product_id}",
+    response_model=ProductResponse,
+    summary="Get product by ID",
+)
+async def get_product(product_id: str, service: ProductServiceDep):
+    return await service.get_product(product_id)
+
+
+@router.post(
+    "/api/v1/products",
+    response_model=ProductResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Vendor — Create product",
+)
+async def create_product(body: CreateProductRequest, claims: VendorDep, service: ProductServiceDep):
+    return await service.create_product(claims.user_id, body)
+
+
+@router.patch(
+    "/api/v1/products/{product_id}",
+    response_model=ProductResponse,
+    summary="Vendor — Update product",
+)
+async def update_product(
+    product_id: str, body: UpdateProductRequest, claims: VendorDep, service: ProductServiceDep
+):
+    return await service.update_product(product_id, claims.user_id, body)
+
+
+@router.delete(
+    "/api/v1/products/{product_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Vendor — Delete product",
+)
+async def delete_product(product_id: str, claims: VendorDep, service: ProductServiceDep):
+    await service.delete_product(product_id, claims.user_id)
+
+
+@router.post(
+    "/api/v1/products/{product_id}/images",
+    response_model=ProductResponse,
+    summary="Vendor — Upload product image",
+)
+async def upload_product_image(
+    product_id: str,
+    claims: VendorDep,
+    service: ProductServiceDep,
+    file: UploadFile = File(...),
+):
+    file_bytes = await file.read()
+    return await service.upload_product_image(product_id, claims.user_id, file_bytes, file.content_type or "")
+
+
+@router.delete(
+    "/api/v1/products/{product_id}/images/{index}",
+    response_model=ProductResponse,
+    summary="Vendor — Remove product image by index",
+)
+async def delete_product_image(
+    product_id: str, index: int, claims: VendorDep, service: ProductServiceDep
+):
+    return await service.delete_product_image(product_id, claims.user_id, index)
+
+
+# ---------------------------------------------------------------------------
+# Devices
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/api/v1/devices",
+    response_model=PaginatedResponse[DeviceResponse],
+    summary="Vendor — List own devices",
+)
+async def list_devices(
+    claims: VendorDep,
+    service: ProductServiceDep,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+    product_id: Optional[str] = Query(default=None),
+    is_active: Optional[bool] = Query(default=None),
+):
+    return await service.list_devices(claims.user_id, page, page_size, product_id, is_active)
+
+
+@router.get(
+    "/api/v1/devices/{device_id}",
+    response_model=DeviceResponse,
+    summary="Vendor — Get device",
+)
+async def get_device(device_id: str, claims: VendorDep, service: ProductServiceDep):
+    return await service.get_device(device_id, claims.user_id)
+
+
+@router.post(
+    "/api/v1/devices",
+    response_model=DeviceResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Vendor — Create device",
+)
+async def create_device(body: CreateDeviceRequest, claims: VendorDep, service: ProductServiceDep):
+    return await service.create_device(claims.user_id, body)
+
+
+@router.patch(
+    "/api/v1/devices/{device_id}",
+    response_model=DeviceResponse,
+    summary="Vendor — Update device",
+)
+async def update_device(
+    device_id: str, body: UpdateDeviceRequest, claims: VendorDep, service: ProductServiceDep
+):
+    return await service.update_device(device_id, claims.user_id, body)
+
+
+@router.delete(
+    "/api/v1/devices/{device_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Vendor — Delete device",
+)
+async def delete_device(device_id: str, claims: VendorDep, service: ProductServiceDep):
+    await service.delete_device(device_id, claims.user_id)

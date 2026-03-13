@@ -4,6 +4,10 @@ import type { User } from "@/schemas/user.schema";
 import type { LoginForm, TokenResponse, MeResponse } from "@/schemas/auth.schema";
 import * as authService from "@/services/auth.service";
 
+export type LoginResult =
+  | { status: "authenticated" }
+  | { status: "incomplete"; step: number; role: string };
+
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
@@ -12,15 +16,18 @@ interface AuthState {
   refreshToken: string | null;
   /** Temp token used between multi-step registration steps. */
   tempToken: string | null;
+  /** Which registration step to resume from (set after login with incomplete registration). */
+  registrationStep: number | null;
 
   // Actions
-  login: (data: LoginForm) => Promise<void>;
+  login: (data: LoginForm) => Promise<LoginResult>;
   logout: () => void;
   updateUser: (updates: Partial<User>) => void;
   setUser: (user: User | null) => void;
   setTokens: (tokens: TokenResponse) => Promise<void>;
   setTempToken: (token: string) => void;
   clearTempToken: () => void;
+  clearRegistrationStep: () => void;
 }
 
 /** Map the API's /auth/me response to the frontend User shape. */
@@ -49,20 +56,39 @@ export const useAuthStore = create<AuthState>()(
       accessToken: null,
       refreshToken: null,
       tempToken: null,
+      registrationStep: null,
 
-      login: async (data) => {
+      login: async (data): Promise<LoginResult> => {
         set({ isLoading: true });
         try {
-          const tokens = await authService.login(data);
-          const me = await authService.getMe(tokens.access_token);
+          const response = await authService.login(data);
+
+          // Incomplete registration — backend returned a temp token with a step
+          if ("temp_token" in response) {
+            set({
+              isLoading: false,
+              tempToken: response.temp_token,
+              registrationStep: response.registration_step ?? 2,
+            });
+            return {
+              status: "incomplete",
+              step: response.registration_step ?? 2,
+              role: data.role,
+            };
+          }
+
+          // Full login — fetch user identity
+          const me = await authService.getMe(response.access_token);
           set({
             user: meToUser(me),
             isAuthenticated: true,
             isLoading: false,
-            accessToken: tokens.access_token,
-            refreshToken: tokens.refresh_token,
+            accessToken: response.access_token,
+            refreshToken: response.refresh_token,
             tempToken: null,
+            registrationStep: null,
           });
+          return { status: "authenticated" };
         } catch (err) {
           set({ isLoading: false });
           throw err;
@@ -76,6 +102,7 @@ export const useAuthStore = create<AuthState>()(
           accessToken: null,
           refreshToken: null,
           tempToken: null,
+          registrationStep: null,
         });
       },
 
@@ -102,20 +129,22 @@ export const useAuthStore = create<AuthState>()(
             accessToken: tokens.access_token,
             refreshToken: tokens.refresh_token,
             tempToken: null,
+            registrationStep: null,
           });
         } catch {
-          // Even if /me fails, store the tokens
           set({
             isAuthenticated: true,
             accessToken: tokens.access_token,
             refreshToken: tokens.refresh_token,
             tempToken: null,
+            registrationStep: null,
           });
         }
       },
 
       setTempToken: (token) => set({ tempToken: token }),
       clearTempToken: () => set({ tempToken: null }),
+      clearRegistrationStep: () => set({ registrationStep: null }),
     }),
     {
       name: "auth-storage",

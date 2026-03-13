@@ -19,6 +19,7 @@ class TokenResponse(BaseModel):
 class TempTokenResponse(BaseModel):
     temp_token: str
     token_type: str = "Bearer"
+    registration_step: Optional[int] = None
 
 
 # ---------------------------------------------------------------------------

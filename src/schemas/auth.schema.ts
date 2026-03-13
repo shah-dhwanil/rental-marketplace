@@ -101,7 +101,13 @@ export const TokenResponseSchema = z.object({
 export const TempTokenResponseSchema = z.object({
   temp_token: z.string(),
   token_type: z.string(),
+  registration_step: z.number().int().optional(),
 });
+
+export const LoginResponseSchema = z.union([
+  TokenResponseSchema,
+  TempTokenResponseSchema,
+]);
 
 export const MeResponseSchema = z.object({
   user_id: z.string(),
@@ -113,4 +119,5 @@ export const MeResponseSchema = z.object({
 
 export type TokenResponse = z.infer<typeof TokenResponseSchema>;
 export type TempTokenResponse = z.infer<typeof TempTokenResponseSchema>;
+export type LoginResponse = z.infer<typeof LoginResponseSchema>;
 export type MeResponse = z.infer<typeof MeResponseSchema>;

@@ -25,7 +25,6 @@ from api.users.exceptions import (
     OTPAlreadyUsedException,
     OTPExpiredException,
     OTPInvalidException,
-    RegistrationIncompleteException,
     UserAlreadyExistsException,
     UserInactiveException,
     UserNotFoundException,
@@ -238,7 +237,7 @@ class UserService:
     # Auth
     # -----------------------------------------------------------------------
 
-    async def login(self, data: LoginRequest) -> TokenResponse:
+    async def login(self, data: LoginRequest):
         try:
             user: Optional[dict] = None
             if data.email_id:
@@ -253,12 +252,25 @@ class UserService:
                 raise UserInactiveException("Account is deactivated")
             if not user["is_verified"]:
                 raise UserInactiveException("Account is not verified. Please verify your email or mobile.")
-            if not user["is_profile_complete"]:
-                raise RegistrationIncompleteException(
-                    "Registration is not complete. Please finish setting up your profile."
-                )
 
             user_id = str(user["id"])
+
+            if not user["is_profile_complete"]:
+                # Determine which step the user needs to resume from
+                registration_step = 2
+                if data.role == "vendor":
+                    vendor = await self._repo.find_vendor(UUID(user_id))
+                    if vendor and vendor.get("address"):
+                        registration_step = 3
+                elif data.role == "delivery_partner":
+                    dp = await self._repo.find_delivery_partner(UUID(user_id))
+                    if dp and dp.get("address"):
+                        registration_step = 3
+                return TempTokenResponse(
+                    temp_token=create_temp_token(user_id, data.role),
+                    registration_step=registration_step,
+                )
+
             return TokenResponse(
                 access_token=create_access_token(user_id, data.role),
                 refresh_token=create_refresh_token(user_id, data.role),
