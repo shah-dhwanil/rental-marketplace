@@ -6,6 +6,7 @@ import { LoginLandingPage } from "./pages/auth/LoginLandingPage";
 import { CustomerLoginPage } from "./pages/auth/CustomerLoginPage";
 import { VendorLoginPage } from "./pages/auth/VendorLoginPage";
 import { DeliveryPartnerLoginPage } from "./pages/auth/DeliveryPartnerLoginPage";
+import { AdminLoginPage } from "./pages/auth/AdminLoginPage";
 import { CustomerSignupPage } from "./pages/auth/CustomerSignupPage";
 import { VendorSignupPage } from "./pages/auth/VendorSignupPage";
 import { DeliveryPartnerSignupPage } from "./pages/auth/DeliveryPartnerSignupPage";
@@ -20,6 +21,18 @@ import { VendorProductDevicesPage } from "./pages/vendor-dashboard/VendorProduct
 import { VendorCreateDevicePage } from "./pages/vendor-dashboard/VendorCreateDevicePage";
 import { VendorDevicesPage } from "./pages/vendor-dashboard/VendorDevicesPage";
 import { VendorEditDevicePage } from "./pages/vendor-dashboard/VendorEditDevicePage";
+import { AdminDashboardLayout } from "./pages/admin-dashboard/AdminDashboardLayout";
+import { AdminOverviewPage } from "./pages/admin-dashboard/AdminOverviewPage";
+import { AdminUsersPage } from "./pages/admin-dashboard/AdminUsersPage";
+import { AdminUserDetailPage } from "./pages/admin-dashboard/AdminUserDetailPage";
+import { AdminCategoriesPage } from "./pages/admin-dashboard/AdminCategoriesPage";
+import { AdminCreateCategoryPage } from "./pages/admin-dashboard/AdminCreateCategoryPage";
+import { AdminEditCategoryPage } from "./pages/admin-dashboard/AdminEditCategoryPage";
+import { AdminProductsPage } from "./pages/admin-dashboard/AdminProductsPage";
+import { AdminProductDetailPage } from "./pages/admin-dashboard/AdminProductDetailPage";
+import { AdminProductDevicesPage } from "./pages/admin-dashboard/AdminProductDevicesPage";
+import { AdminCreateDevicePage } from "./pages/admin-dashboard/AdminCreateDevicePage";
+import { AdminEditDevicePage } from "./pages/admin-dashboard/AdminEditDevicePage";
 
 const router = createBrowserRouter([
   // ── Main app (with full Navbar + Footer) ────────────────────────────────────
@@ -42,6 +55,7 @@ const router = createBrowserRouter([
   { path: "/login/customer", element: <CustomerLoginPage /> },
   { path: "/login/vendor", element: <VendorLoginPage /> },
   { path: "/login/delivery-partner", element: <DeliveryPartnerLoginPage /> },
+  { path: "/login/admin", element: <AdminLoginPage /> },
 
   // ── Sign-up pages ────────────────────────────────────────────────────────
   { path: "/signup/customer", element: <CustomerSignupPage /> },
@@ -69,6 +83,33 @@ const router = createBrowserRouter([
       // Devices (cross-product view)
       { path: "devices", element: <VendorDevicesPage /> },
       { path: "devices/:deviceId/edit", element: <VendorEditDevicePage /> },
+    ],
+  },
+
+  // ── Admin Dashboard ──────────────────────────────────────────────────────
+  {
+    path: "/admin/dashboard",
+    element: <AdminDashboardLayout />,
+    children: [
+      { index: true, element: <AdminOverviewPage /> },
+
+      // Users
+      { path: "users", element: <AdminUsersPage /> },
+      { path: "users/:userId", element: <AdminUserDetailPage /> },
+
+      // Categories
+      { path: "categories", element: <AdminCategoriesPage /> },
+      { path: "categories/create", element: <AdminCreateCategoryPage /> },
+      { path: "categories/:categoryId/edit", element: <AdminEditCategoryPage /> },
+
+      // Products
+      { path: "products", element: <AdminProductsPage /> },
+      { path: "products/:productId", element: <AdminProductDetailPage /> },
+      { path: "products/:productId/devices", element: <AdminProductDevicesPage /> },
+      { path: "products/:productId/devices/create", element: <AdminCreateDevicePage /> },
+
+      // Devices (cross-product edit)
+      { path: "devices/:deviceId/edit", element: <AdminEditDevicePage /> },
     ],
   },
 ]);

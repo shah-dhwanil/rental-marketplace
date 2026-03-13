@@ -1,5 +1,6 @@
 import { apiFetch, API_BASE } from "@/lib/api";
 import {
+  CategorySchema,
   CategoryDetailSchema,
   PaginatedCategoriesSchema,
   PaginatedProductsSchema,
@@ -37,9 +38,78 @@ export async function getCategory(id: string): Promise<CategoryDetail> {
   return CategoryDetailSchema.parse(data);
 }
 
+export async function createCategory(
+  token: string,
+  body: Record<string, unknown>,
+): Promise<Category> {
+  const data = await apiFetch<unknown>(
+    `/categories`,
+    { method: "POST", body: JSON.stringify(body) },
+    token,
+  );
+  return CategorySchema.parse(data);
+}
+
+export async function updateCategory(
+  token: string,
+  categoryId: string,
+  body: Record<string, unknown>,
+): Promise<Category> {
+  const data = await apiFetch<unknown>(
+    `/categories/${categoryId}`,
+    { method: "PATCH", body: JSON.stringify(body) },
+    token,
+  );
+  return CategorySchema.parse(data);
+}
+
+export async function deleteCategory(token: string, categoryId: string): Promise<void> {
+  await apiFetch<void>(`/categories/${categoryId}`, { method: "DELETE" }, token);
+}
+
+export async function uploadCategoryImage(
+  token: string,
+  categoryId: string,
+  file: File,
+): Promise<{ image_url: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`${API_BASE}/categories/${categoryId}/image`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { detail?: string };
+    throw new Error(body.detail ?? `Upload failed (${res.status})`);
+  }
+  return res.json() as Promise<{ image_url: string }>;
+}
+
+export async function deleteCategoryImage(token: string, categoryId: string): Promise<void> {
+  await apiFetch<void>(`/categories/${categoryId}/image`, { method: "DELETE" }, token);
+}
+
 // ---------------------------------------------------------------------------
 // Products
 // ---------------------------------------------------------------------------
+
+export async function listAllProducts(params?: {
+  page?: number;
+  page_size?: number;
+  category_id?: string;
+  is_active?: boolean;
+  q?: string;
+}): Promise<PaginatedProducts> {
+  const qs = new URLSearchParams();
+  if (params?.page) qs.set("page", String(params.page));
+  if (params?.page_size) qs.set("page_size", String(params.page_size));
+  if (params?.category_id) qs.set("category_id", params.category_id);
+  if (params?.is_active !== undefined) qs.set("is_active", String(params.is_active));
+  if (params?.q) qs.set("q", params.q);
+  const data = await apiFetch<unknown>(`/products?${qs.toString()}`);
+  return PaginatedProductsSchema.parse(data);
+}
 
 export async function listMyProducts(
   token: string,

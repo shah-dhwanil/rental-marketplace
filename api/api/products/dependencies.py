@@ -37,4 +37,11 @@ def require_vendor(claims: CurrentUserDep) -> CurrentUserDep:
     return claims
 
 
+def require_vendor_or_admin(claims: CurrentUserDep) -> CurrentUserDep:
+    if claims.role not in ("vendor", "admin"):
+        raise InsufficientPermissionException("Vendor or admin access required")
+    return claims
+
+
 VendorDep = Annotated[CurrentUserDep, Depends(require_vendor)]
+VendorOrAdminDep = Annotated[CurrentUserDep, Depends(require_vendor_or_admin)]

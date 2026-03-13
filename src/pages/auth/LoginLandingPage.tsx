@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { AuthLayout } from "./AuthLayout";
-import { User, Store, Truck } from "lucide-react";
+import { User, Store, Truck, Shield } from "lucide-react";
 
 const ROLES = [
   {
@@ -29,6 +29,15 @@ const ROLES = [
     color: "text-amber-600 dark:text-amber-400",
     bg: "bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/30",
     border: "border-amber-200 dark:border-amber-800",
+  },
+  {
+    to: "/login/admin",
+    icon: Shield,
+    label: "Admin",
+    desc: "Platform control panel — manage users, catalog, and settings",
+    color: "text-violet-600 dark:text-violet-400",
+    bg: "bg-violet-50 dark:bg-violet-900/20 hover:bg-violet-100 dark:hover:bg-violet-900/30",
+    border: "border-violet-200 dark:border-violet-800",
   },
 ] as const;
 

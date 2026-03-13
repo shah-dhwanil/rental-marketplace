@@ -167,13 +167,13 @@ class ProductService:
             raise UnkownAppException() from exc
 
     async def update_product(
-        self, product_id: str, vendor_id: str, data: UpdateProductRequest
+        self, product_id: str, vendor_id: Optional[str], data: UpdateProductRequest
     ) -> ProductResponse:
         try:
             row = await self._repo.find_by_id(UUID(product_id))
             if not row:
                 raise ProductNotFoundException(product_id)
-            if str(row["vendor_id"]) != vendor_id:
+            if vendor_id and str(row["vendor_id"]) != vendor_id:
                 raise ProductOwnershipException()
 
             fields: dict = {}
@@ -209,12 +209,12 @@ class ProductService:
             logger.error("update_product_failed", exc_info=True)
             raise UnkownAppException() from exc
 
-    async def delete_product(self, product_id: str, vendor_id: str) -> None:
+    async def delete_product(self, product_id: str, vendor_id: Optional[str]) -> None:
         try:
             row = await self._repo.find_by_id(UUID(product_id))
             if not row:
                 raise ProductNotFoundException(product_id)
-            if str(row["vendor_id"]) != vendor_id:
+            if vendor_id and str(row["vendor_id"]) != vendor_id:
                 raise ProductOwnershipException()
             await self._repo.soft_delete_product(UUID(product_id))
             logger.info("product_deleted", product_id=product_id, vendor_id=vendor_id)
@@ -225,7 +225,7 @@ class ProductService:
             raise UnkownAppException() from exc
 
     async def upload_product_image(
-        self, product_id: str, vendor_id: str, file_bytes: bytes, content_type: str
+        self, product_id: str, vendor_id: Optional[str], file_bytes: bytes, content_type: str
     ) -> ProductResponse:
         try:
             if content_type not in _ALLOWED_IMAGE_TYPES:
@@ -244,7 +244,7 @@ class ProductService:
             row = await self._repo.find_by_id(UUID(product_id))
             if not row:
                 raise ProductNotFoundException(product_id)
-            if str(row["vendor_id"]) != vendor_id:
+            if vendor_id and str(row["vendor_id"]) != vendor_id:
                 raise ProductOwnershipException()
 
             current_images = list(row.get("image_urls") or [])
@@ -268,13 +268,13 @@ class ProductService:
             raise UnkownAppException() from exc
 
     async def delete_product_image(
-        self, product_id: str, vendor_id: str, index: int
+        self, product_id: str, vendor_id: Optional[str], index: int
     ) -> ProductResponse:
         try:
             row = await self._repo.find_by_id(UUID(product_id))
             if not row:
                 raise ProductNotFoundException(product_id)
-            if str(row["vendor_id"]) != vendor_id:
+            if vendor_id and str(row["vendor_id"]) != vendor_id:
                 raise ProductOwnershipException()
 
             image_ids = list(row.get("image_ids") or [])
@@ -305,12 +305,12 @@ class ProductService:
     # Devices
     # -----------------------------------------------------------------------
 
-    async def create_device(self, vendor_id: str, data: CreateDeviceRequest) -> DeviceResponse:
+    async def create_device(self, vendor_id: Optional[str], data: CreateDeviceRequest) -> DeviceResponse:
         try:
             product = await self._repo.find_by_id(UUID(data.product_id))
             if not product:
                 raise ProductNotFoundException(data.product_id)
-            if str(product["vendor_id"]) != vendor_id:
+            if vendor_id and str(product["vendor_id"]) != vendor_id:
                 raise ProductOwnershipException()
 
             row = await self._repo.create_device({
@@ -330,20 +330,20 @@ class ProductService:
 
     async def list_devices(
         self,
-        vendor_id: str,
+        vendor_id: Optional[str],
         page: int,
         page_size: int,
         product_id: Optional[str] = None,
         is_active: Optional[bool] = None,
     ) -> PaginatedResponse[DeviceResponse]:
         try:
-            # If product_id provided, verify vendor owns the product
+            # If product_id provided, verify vendor owns the product (skip for admin)
             pid: Optional[UUID] = None
             if product_id:
                 product = await self._repo.find_by_id(UUID(product_id))
                 if not product:
                     raise ProductNotFoundException(product_id)
-                if str(product["vendor_id"]) != vendor_id:
+                if vendor_id and str(product["vendor_id"]) != vendor_id:
                     raise ProductOwnershipException()
                 pid = UUID(product_id)
 
@@ -360,13 +360,13 @@ class ProductService:
             logger.error("list_devices_failed", exc_info=True)
             raise UnkownAppException() from exc
 
-    async def get_device(self, device_id: str, vendor_id: str) -> DeviceResponse:
+    async def get_device(self, device_id: str, vendor_id: Optional[str]) -> DeviceResponse:
         try:
             device = await self._repo.find_device_by_id(UUID(device_id))
             if not device:
                 raise DeviceNotFoundException(device_id)
             product = await self._repo.find_by_id(UUID(str(device["product_id"])))
-            if not product or str(product["vendor_id"]) != vendor_id:
+            if not product or (vendor_id and str(product["vendor_id"]) != vendor_id):
                 raise ProductOwnershipException()
             return _row_to_device(device)
         except AppException:
@@ -376,14 +376,14 @@ class ProductService:
             raise UnkownAppException() from exc
 
     async def update_device(
-        self, device_id: str, vendor_id: str, data: UpdateDeviceRequest
+        self, device_id: str, vendor_id: Optional[str], data: UpdateDeviceRequest
     ) -> DeviceResponse:
         try:
             device = await self._repo.find_device_by_id(UUID(device_id))
             if not device:
                 raise DeviceNotFoundException(device_id)
             product = await self._repo.find_by_id(UUID(str(device["product_id"])))
-            if not product or str(product["vendor_id"]) != vendor_id:
+            if not product or (vendor_id and str(product["vendor_id"]) != vendor_id):
                 raise ProductOwnershipException()
 
             fields: dict = {}
@@ -404,13 +404,13 @@ class ProductService:
             logger.error("update_device_failed", exc_info=True)
             raise UnkownAppException() from exc
 
-    async def delete_device(self, device_id: str, vendor_id: str) -> None:
+    async def delete_device(self, device_id: str, vendor_id: Optional[str]) -> None:
         try:
             device = await self._repo.find_device_by_id(UUID(device_id))
             if not device:
                 raise DeviceNotFoundException(device_id)
             product = await self._repo.find_by_id(UUID(str(device["product_id"])))
-            if not product or str(product["vendor_id"]) != vendor_id:
+            if not product or (vendor_id and str(product["vendor_id"]) != vendor_id):
                 raise ProductOwnershipException()
             await self._repo.soft_delete_device(UUID(device_id))
             logger.info("device_deleted", device_id=device_id)
@@ -421,13 +421,13 @@ class ProductService:
             raise UnkownAppException() from exc
 
     async def get_product_device_count(
-        self, product_id: str, vendor_id: str
+        self, product_id: str, vendor_id: Optional[str]
     ) -> int:
         try:
             product = await self._repo.find_by_id(UUID(product_id))
             if not product:
                 raise ProductNotFoundException(product_id)
-            if str(product["vendor_id"]) != vendor_id:
+            if vendor_id and str(product["vendor_id"]) != vendor_id:
                 raise ProductOwnershipException()
             return await self._repo.count_devices_for_product(UUID(product_id))
         except AppException:

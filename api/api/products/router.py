@@ -5,7 +5,7 @@ from typing import Optional
 from fastapi import APIRouter, File, Query, UploadFile, status
 
 from api.models.pagination import PaginatedResponse
-from api.products.dependencies import ProductServiceDep, VendorDep
+from api.products.dependencies import ProductServiceDep, VendorDep, VendorOrAdminDep
 from api.products.models.requests import (
     CreateDeviceRequest,
     CreateProductRequest,
@@ -78,47 +78,51 @@ async def create_product(body: CreateProductRequest, claims: VendorDep, service:
 @router.patch(
     "/api/v1/products/{product_id}",
     response_model=ProductResponse,
-    summary="Vendor — Update product",
+    summary="Vendor/Admin — Update product",
 )
 async def update_product(
-    product_id: str, body: UpdateProductRequest, claims: VendorDep, service: ProductServiceDep
+    product_id: str, body: UpdateProductRequest, claims: VendorOrAdminDep, service: ProductServiceDep
 ):
-    return await service.update_product(product_id, claims.user_id, body)
+    vendor_id = claims.user_id if claims.role == "vendor" else None
+    return await service.update_product(product_id, vendor_id, body)
 
 
 @router.delete(
     "/api/v1/products/{product_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Vendor — Delete product",
+    summary="Vendor/Admin — Delete product",
 )
-async def delete_product(product_id: str, claims: VendorDep, service: ProductServiceDep):
-    await service.delete_product(product_id, claims.user_id)
+async def delete_product(product_id: str, claims: VendorOrAdminDep, service: ProductServiceDep):
+    vendor_id = claims.user_id if claims.role == "vendor" else None
+    await service.delete_product(product_id, vendor_id)
 
 
 @router.post(
     "/api/v1/products/{product_id}/images",
     response_model=ProductResponse,
-    summary="Vendor — Upload product image",
+    summary="Vendor/Admin — Upload product image",
 )
 async def upload_product_image(
     product_id: str,
-    claims: VendorDep,
+    claims: VendorOrAdminDep,
     service: ProductServiceDep,
     file: UploadFile = File(...),
 ):
+    vendor_id = claims.user_id if claims.role == "vendor" else None
     file_bytes = await file.read()
-    return await service.upload_product_image(product_id, claims.user_id, file_bytes, file.content_type or "")
+    return await service.upload_product_image(product_id, vendor_id, file_bytes, file.content_type or "")
 
 
 @router.delete(
     "/api/v1/products/{product_id}/images/{index}",
     response_model=ProductResponse,
-    summary="Vendor — Remove product image by index",
+    summary="Vendor/Admin — Remove product image by index",
 )
 async def delete_product_image(
-    product_id: str, index: int, claims: VendorDep, service: ProductServiceDep
+    product_id: str, index: int, claims: VendorOrAdminDep, service: ProductServiceDep
 ):
-    return await service.delete_product_image(product_id, claims.user_id, index)
+    vendor_id = claims.user_id if claims.role == "vendor" else None
+    return await service.delete_product_image(product_id, vendor_id, index)
 
 
 # ---------------------------------------------------------------------------
@@ -128,53 +132,58 @@ async def delete_product_image(
 @router.get(
     "/api/v1/devices",
     response_model=PaginatedResponse[DeviceResponse],
-    summary="Vendor — List own devices",
+    summary="Vendor/Admin — List devices",
 )
 async def list_devices(
-    claims: VendorDep,
+    claims: VendorOrAdminDep,
     service: ProductServiceDep,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     product_id: Optional[str] = Query(default=None),
     is_active: Optional[bool] = Query(default=None),
 ):
-    return await service.list_devices(claims.user_id, page, page_size, product_id, is_active)
+    vendor_id = claims.user_id if claims.role == "vendor" else None
+    return await service.list_devices(vendor_id, page, page_size, product_id, is_active)
 
 
 @router.get(
     "/api/v1/devices/{device_id}",
     response_model=DeviceResponse,
-    summary="Vendor — Get device",
+    summary="Vendor/Admin — Get device",
 )
-async def get_device(device_id: str, claims: VendorDep, service: ProductServiceDep):
-    return await service.get_device(device_id, claims.user_id)
+async def get_device(device_id: str, claims: VendorOrAdminDep, service: ProductServiceDep):
+    vendor_id = claims.user_id if claims.role == "vendor" else None
+    return await service.get_device(device_id, vendor_id)
 
 
 @router.post(
     "/api/v1/devices",
     response_model=DeviceResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Vendor — Create device",
+    summary="Vendor/Admin — Create device",
 )
-async def create_device(body: CreateDeviceRequest, claims: VendorDep, service: ProductServiceDep):
-    return await service.create_device(claims.user_id, body)
+async def create_device(body: CreateDeviceRequest, claims: VendorOrAdminDep, service: ProductServiceDep):
+    vendor_id = claims.user_id if claims.role == "vendor" else None
+    return await service.create_device(vendor_id, body)
 
 
 @router.patch(
     "/api/v1/devices/{device_id}",
     response_model=DeviceResponse,
-    summary="Vendor — Update device",
+    summary="Vendor/Admin — Update device",
 )
 async def update_device(
-    device_id: str, body: UpdateDeviceRequest, claims: VendorDep, service: ProductServiceDep
+    device_id: str, body: UpdateDeviceRequest, claims: VendorOrAdminDep, service: ProductServiceDep
 ):
-    return await service.update_device(device_id, claims.user_id, body)
+    vendor_id = claims.user_id if claims.role == "vendor" else None
+    return await service.update_device(device_id, vendor_id, body)
 
 
 @router.delete(
     "/api/v1/devices/{device_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Vendor — Delete device",
+    summary="Vendor/Admin — Delete device",
 )
-async def delete_device(device_id: str, claims: VendorDep, service: ProductServiceDep):
-    await service.delete_device(device_id, claims.user_id)
+async def delete_device(device_id: str, claims: VendorOrAdminDep, service: ProductServiceDep):
+    vendor_id = claims.user_id if claims.role == "vendor" else None
+    await service.delete_device(device_id, vendor_id)

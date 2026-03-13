@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // ── Role ──────────────────────────────────────────────────────────────────────
 
-export const APP_ROLES = ["customer", "vendor", "delivery_partner"] as const;
+export const APP_ROLES = ["customer", "vendor", "delivery_partner","admin"] as const;
 export const AppRoleSchema = z.enum(APP_ROLES);
 export type AppRole = z.infer<typeof AppRoleSchema>;
 
@@ -10,6 +10,7 @@ export const ROLE_LABELS: Record<AppRole, string> = {
   customer: "Customer",
   vendor: "Vendor",
   delivery_partner: "Delivery Partner",
+  admin: "Admin",
 };
 
 // ── Register Step 1 ───────────────────────────────────────────────────────────
