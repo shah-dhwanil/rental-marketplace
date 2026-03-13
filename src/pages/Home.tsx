@@ -1,5 +1,4 @@
-import { Link, useLoaderData, Await } from "react-router";
-import { Suspense } from "react";
+import { Link, useLoaderData } from "react-router";
 import { ArrowRight, Star, Truck, ShieldCheck, Clock, MapPin, Search, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,92 +11,20 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import type { homeLoader } from "@/loaders";
-import { useWishlistStore, useCartStore } from "@/stores";
+import { useWishlistStore, useCartStore, useRentalDatesStore } from "@/stores";
 
-const categories = [
-  { name: "Cameras", image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=300", count: "120+" },
-  { name: "Laptops", image: "https://images.unsplash.com/photo-1496181133206-80ce9b88a853?auto=format&fit=crop&q=80&w=300", count: "80+" },
-  { name: "Gaming", image: "https://images.unsplash.com/photo-1593305841991-05c29736f87e?auto=format&fit=crop&q=80&w=300", count: "50+" },
-  { name: "Drones", image: "https://images.unsplash.com/photo-1507582020474-9a35b7d455d9?auto=format&fit=crop&q=80&w=300", count: "30+" },
-  { name: "Audio", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?auto=format&fit=crop&q=80&w=300", count: "60+" },
-  { name: "Camping", image: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?auto=format&fit=crop&q=80&w=300", count: "45+" },
-  { name: "Fashion", image: "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&q=80&w=300", count: "200+" },
-  { name: "Events", image: "https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&q=80&w=300", count: "15+" },
-];
-
-const hotDeals = [
-  {
-    id: 1,
-    name: "Sony Alpha a7 III Mirrorless Camera",
-    description: "Full-frame mirrorless interchangeable-lens camera.",
-    category: "Camera",
-    image: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?auto=format&fit=crop&q=80&w=500",
-    rating: 4.8,
-    reviews: 124,
-    price: 45,
-    originalPrice: 2000,
-    tag: "Best Seller",
-    distance: "2.5 km"
-  },
-  {
-    id: 2,
-    name: "Apple MacBook Pro 16\" M2 Max",
-    description: "Laptop with M2 Max chip, 32GB RAM, 1TB SSD.",
-    category: "Laptop",
-    image: "https://images.unsplash.com/photo-1517336714731-489689fd1ca4?auto=format&fit=crop&q=80&w=500",
-    rating: 4.9,
-    reviews: 89,
-    price: 35,
-    originalPrice: 2500,
-    tag: "Trending",
-    distance: "1.2 km"
-  },
-  {
-    id: 3,
-    name: "DJI Mavic 3 Pro Cine Drone",
-    description: "Three-camera system with Hasselblad main camera.",
-    category: "Drone",
-    image: "https://images.unsplash.com/photo-1507582020474-9a35b7d455d9?auto=format&fit=crop&q=80&w=500",
-    rating: 4.7,
-    reviews: 56,
-    price: 55,
-    originalPrice: 4000,
-    tag: "Pro Choice",
-    distance: "5.0 km"
-  },
-  {
-    id: 4,
-    name: "PlayStation 5 Console (Disc Edition)",
-    description: "Next-gen gaming console with DualSense controller.",
-    category: "Gaming",
-    image: "https://images.unsplash.com/photo-1606144042614-b2417e99c4e3?auto=format&fit=crop&q=80&w=500",
-    rating: 4.9,
-    reviews: 210,
-    price: 25,
-    originalPrice: 500,
-    tag: "Popular",
-    distance: "3.8 km"
-  },
-  {
-    id: 5,
-    name: "Canon EOS R5 Body",
-    description: "Professional full-frame mirrorless camera.",
-    category: "Camera",
-    image: "https://images.unsplash.com/photo-1502920917128-1aa500764cbd?auto=format&fit=crop&q=80&w=500",
-    rating: 4.9,
-    reviews: 45,
-    price: 60,
-    originalPrice: 3800,
-    tag: "Premium",
-    distance: "4.2 km"
-  }
-];
+const formatINR = (n: number) =>
+  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(n);
 
 export function Home() {
   const data = useLoaderData<typeof homeLoader>();
   const { isInWishlist, toggleWishlist } = useWishlistStore();
   const addToCart = useCartStore(state => state.addToCart);
-  
+  const { startDate, endDate, getDays } = useRentalDatesStore();
+
+  const today = new Date().toISOString().split("T")[0];
+  const oneWeekLater = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
+  const days = getDays() || 7;
   return (
     <div className="flex flex-col pb-16 bg-slate-50 dark:bg-slate-950 min-h-screen transition-colors">
       
@@ -105,10 +32,10 @@ export function Home() {
       <div className="bg-white dark:bg-slate-900 py-4 shadow-sm border-b dark:border-slate-800 mb-4">
         <div className="container mx-auto px-4 overflow-x-auto no-scrollbar">
            <div className="flex gap-6 min-w-max justify-start md:justify-center">
-             {data.categories.categories.map((cat) => (
+             {data.categories.map((cat) => (
                <Link key={cat.id} to={`/category/${cat.slug}`} className="flex flex-col items-center gap-2 group cursor-pointer min-w-[70px]">
                  <div className="h-16 w-16 md:h-20 md:w-20 rounded-full bg-slate-100 dark:bg-slate-800 p-1 group-hover:ring-2 ring-primary dark:ring-purple-500 transition-all overflow-hidden border border-slate-200 dark:border-slate-700">
-                    <img src={cat.image} alt={cat.name} className="h-full w-full rounded-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    <img src={cat.image_url} alt={cat.name} className="h-full w-full rounded-full object-cover group-hover:scale-110 transition-transform duration-500" />
                  </div>
                  <span className="text-xs md:text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-primary dark:group-hover:text-purple-400">{cat.name}</span>
                </Link>
@@ -150,126 +77,103 @@ export function Home() {
       </div>
 
       {/* Recommended Section (Amazon Style Horizontal Scroll) */}
-      <Suspense fallback={
-        <section className="container mx-auto px-4 mb-8">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
-            <div className="h-6 bg-slate-200 rounded w-48 mb-6 animate-pulse" />
-            <div className="flex gap-4 overflow-x-auto pb-6">
-              {[1,2,3,4].map((i) => (
-                <div key={i} className="min-w-[280px] bg-slate-100 h-[380px] rounded-xl animate-pulse" />
-              ))}
+      <section className="container mx-auto px-4 mb-8">
+        <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200">Featured Rentals</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">Handpicked premium items</p>
             </div>
+            <Button variant="outline" size="sm" className="dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">View All</Button>
           </div>
-        </section>
-      }>
-        <Await resolve={data.featuredProducts}>
-          {(featuredProducts) => (
-            <section className="container mx-auto px-4 mb-8">
-              <div className="bg-white dark:bg-slate-900 p-6 rounded-xl shadow-sm border border-slate-100 dark:border-slate-800">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h3 className="text-xl font-bold text-slate-800 dark:text-slate-200">Featured Rentals</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Handpicked premium items</p>
-                  </div>
-                  <Button variant="outline" size="sm" className="dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">View All</Button>
-                </div>
-                
-                <div className="flex gap-4 overflow-x-auto pb-6 no-scrollbar snap-x p-1">
-                  {featuredProducts.map((item) => (
-                    <div key={item.id} className="min-w-[280px] snap-center group">
-                      <Card className="h-full shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-slate-200 dark:border-slate-700 overflow-hidden relative bg-white dark:bg-slate-900 rounded-xl">
-                        <div className="aspect-[4/3] relative bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                          <Link to={`/product/${item.id}`}>
-                            <img src={item.images[0]?.url} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
-                          </Link>
-                          <div className="absolute top-2 left-2 bg-white/95 backdrop-blur text-[10px] font-bold px-2.5 py-1 rounded-full text-slate-800 flex items-center gap-1 shadow-sm border border-slate-100">
-                            <MapPin className="h-3 w-3 text-primary" /> {item.location.city}
-                          </div>
-                          <div className="absolute top-2 right-2 flex gap-2">
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                toggleWishlist(item.id);
-                                const isNowInWishlist = !isInWishlist(item.id);
-                                console.log(
-                                  isNowInWishlist ? "❤️ Added to wishlist:" : "💔 Removed from wishlist:", 
-                                  item.name
-                                );
-                              }}
-                              className={`h-8 w-8 rounded-full flex items-center justify-center transition-all shadow-sm ${
-                                isInWishlist(item.id) 
-                                  ? "bg-red-500 text-white" 
-                                  : "bg-white/95 backdrop-blur text-slate-600 hover:bg-red-50"
-                              }`}
-                            >
-                              <Heart className={`h-4 w-4 ${isInWishlist(item.id) ? "fill-current" : ""}`} />
-                            </button>
-                            <div className="bg-amber-400 text-[10px] font-bold px-2 py-1 rounded text-black shadow-sm flex items-center h-8">
-                              Featured
-                            </div>
-                          </div>
-                        </div>
-                        <CardContent className="p-4 space-y-3">
-                          <div className="text-xs text-primary/80 dark:text-purple-400 font-bold uppercase tracking-wide">{item.category}</div>
-                          <Link to={`/product/${item.id}`}>
-                            <h4 className="font-bold text-slate-900 dark:text-slate-100 line-clamp-2 leading-tight group-hover:text-primary dark:group-hover:text-purple-400 transition-colors min-h-[44px]">{item.name}</h4>
-                          </Link>
-                          
-                          <div className="flex items-center gap-1.5">
-                            <div className="flex text-amber-400 dark:text-amber-500">
-                              {[...Array(5)].map((_, i) => (
-                                <Star key={i} className={`h-3 w-3 ${i < Math.floor(item.rating || 0) ? "fill-current" : "text-slate-200 dark:text-slate-700"}`} />
-                              ))}
-                            </div>
-                            <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">({item.reviewCount} reviews)</span>
-                          </div>
-                          
-                          <div className="pt-3 flex items-end justify-between border-t border-slate-100 dark:border-slate-800 mt-1">
-                            <div>
-                              <div className="flex items-baseline gap-1">
-                                <span className="text-xl font-bold text-slate-900 dark:text-slate-100">${item.pricing.daily}</span>
-                                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">/ day</span>
-                              </div>
-                            </div>
-                            <Button 
-                              size="sm" 
-                              onClick={(e) => {
-                                e.preventDefault();
-                                const cartItem = {
-                                  productId: item.id,
-                                  productName: item.name,
-                                  productImage: item.images[0]?.url || "",
-                                  startDate: new Date().toISOString().split('T')[0] as string,
-                                  endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] as string,
-                                  dailyRate: item.pricing.daily,
-                                  totalDays: 7,
-                                  deposit: item.pricing.deposit,
-                                  deliveryMethod: "pickup" as const,
-                                  deliveryFee: 0,
-                                };
-                                addToCart(cartItem);
-                                console.log("🛒 Added to cart:", {
-                                  product: item.name,
-                                  price: `$${item.pricing.daily}/day`,
-                                  totalDays: 7,
-                                  total: `$${item.pricing.daily * 7}`
-                                });
-                              }}
-                              className="h-9 bg-primary hover:bg-purple-700 text-white shadow-md shadow-purple-500/20 px-4 rounded-lg font-semibold"
-                            >
-                              Add to Cart
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
+
+          <div className="flex gap-4 overflow-x-auto pb-6 no-scrollbar snap-x p-1">
+            {data.featuredProducts.map((item) => (
+              <div key={item.id} className="min-w-[280px] snap-center group">
+                <Card className="h-full shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-slate-200 dark:border-slate-700 overflow-hidden relative bg-white dark:bg-slate-900 rounded-xl">
+                  <div className="aspect-[4/3] relative bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    <Link to={`/product/${item.id}`}>
+                      <img src={item.image_urls?.[0] || "https://via.placeholder.com/300"} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+                    </Link>
+                    <div className="absolute top-2 left-2 bg-white/95 backdrop-blur text-[10px] font-bold px-2.5 py-1 rounded-full text-slate-800 flex items-center gap-1 shadow-sm border border-slate-100">
+                      <MapPin className="h-3 w-3 text-primary" /> {item.id.slice(0, 8)}
                     </div>
-                  ))}
-                </div>
+                    <div className="absolute top-2 right-2 flex gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          toggleWishlist(item.id);
+                          const isNowInWishlist = !isInWishlist(item.id);
+                          console.log(
+                            isNowInWishlist ? "❤️ Added to wishlist:" : "💔 Removed from wishlist:",
+                            item.name
+                          );
+                        }}
+                        className={`h-8 w-8 rounded-full flex items-center justify-center transition-all shadow-sm ${
+                          isInWishlist(item.id)
+                            ? "bg-red-500 text-white"
+                            : "bg-white/95 backdrop-blur text-slate-600 hover:bg-red-50"
+                        }`}
+                      >
+                        <Heart className={`h-4 w-4 ${isInWishlist(item.id) ? "fill-current" : ""}`} />
+                      </button>
+                      <div className="bg-amber-400 text-[10px] font-bold px-2 py-1 rounded text-black shadow-sm flex items-center h-8">
+                        Featured
+                      </div>
+                    </div>
+                  </div>
+                  <CardContent className="p-4 space-y-3">
+                    <div className="text-xs text-primary/80 dark:text-purple-400 font-bold uppercase tracking-wide">{item.created_at}</div>
+                    <Link to={`/product/${item.id}`}>
+                      <h4 className="font-bold text-slate-900 dark:text-slate-100 line-clamp-2 leading-tight group-hover:text-primary dark:group-hover:text-purple-400 transition-colors min-h-[44px]">{item.name}</h4>
+                    </Link>
+
+                    <div className="flex items-center gap-1.5">
+                      <div className="flex text-amber-400 dark:text-amber-500">
+                        {[...Array(5)].map((_, i) => (
+                          <Star key={i} className={`h-3 w-3 ${i < 4 ? "fill-current" : "text-slate-200 dark:text-slate-700"}`} />
+                        ))}
+                      </div>
+                      <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">(0 reviews)</span>
+                    </div>
+
+                    <div className="pt-3 flex items-end justify-between border-t border-slate-100 dark:border-slate-800 mt-1">
+                      <div>
+                        <div className="flex items-baseline gap-1">
+                          <span className="text-xl font-bold text-slate-900 dark:text-slate-100">{formatINR(item.price_day)}</span>
+                          <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">/ day</span>
+                        </div>
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          addToCart({
+                            productId: item.id,
+                            productName: item.name,
+                            productImage: item.image_urls?.[0] || "",
+                            startDate: startDate || today,
+                            endDate: endDate || oneWeekLater,
+                            dailyRate: item.price_day,
+                            totalDays: days,
+                            deposit: 0,
+                            deliveryMethod: "pickup",
+                            deliveryFee: 0,
+                          });
+                          console.log("🛒 Added to cart:", item.name);
+                        }}
+                        className="h-9 bg-primary hover:bg-purple-700 text-white shadow-md shadow-purple-500/20 px-4 rounded-lg font-semibold"
+                      >
+                        Add to Cart
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
-            </section>
-          )}
-        </Await>
-      </Suspense>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* Feature Banners Grid */}
       <section className="container mx-auto px-4 mb-8">

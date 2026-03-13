@@ -1,41 +1,41 @@
 import { type LoaderFunctionArgs } from "react-router";
-import { searchProducts } from "@/services/product.service";
-import { getCategories } from "@/services/category.service";
+import { listAllProducts, listCategories } from "@/services/catalog.service";
 
 /**
  * Search results page loader
- * Loads products matching search query and filters
+ * Loads products matching search query and filters from real API
  */
 export async function searchLoader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
   const query = url.searchParams.get("q") || "";
-  
-  const filters = {
-    query,
-    category: url.searchParams.get("category") as any || undefined,
-    minPrice: url.searchParams.get("minPrice") 
-      ? Number(url.searchParams.get("minPrice")) 
-      : undefined,
-    maxPrice: url.searchParams.get("maxPrice") 
-      ? Number(url.searchParams.get("maxPrice")) 
-      : undefined,
-    condition: url.searchParams.get("condition") as any || undefined,
-    sortBy: url.searchParams.get("sortBy") as any || undefined,
-    page: url.searchParams.get("page") 
-      ? Number(url.searchParams.get("page")) 
-      : 1,
-    pageSize: 24,
-  };
-  
-  const [products, categories] = await Promise.all([
-    searchProducts(filters),
-    getCategories(),
-  ]);
-  
-  return {
-    query,
-    products,
-    categories,
-    filters,
-  };
+  const page = url.searchParams.get("page") ? Number(url.searchParams.get("page")) : 1;
+  const pageSize = 24;
+
+  try {
+    const [productsResponse, categoriesResponse] = await Promise.all([
+      listAllProducts({
+        q: query || undefined,
+        page,
+        page_size: pageSize,
+        is_active: true,
+      }),
+      listCategories({ page: 1, page_size: 100 }),
+    ]);
+
+    return {
+      query,
+      products: productsResponse.items,
+      categories: categoriesResponse.items,
+      pagination: productsResponse.pagination,
+    };
+  } catch (error) {
+    console.error("Failed to search products:", error);
+    return {
+      query,
+      products: [],
+      categories: [],
+      pagination: { page: 1, page_size: 24, pages: 0, total: 0 },
+    };
+  }
 }
+

@@ -127,3 +127,18 @@ class MeIdentityResponse(BaseModel):
 class OTPResponse(BaseModel):
     message: str
     otp: Optional[str] = None  # Populated in DEV environment only
+
+
+# ---------------------------------------------------------------------------
+# Public vendor profile (no auth required)
+# ---------------------------------------------------------------------------
+
+class VendorPublicProfileResponse(BaseModel):
+    id: str
+    name: str                          # owner's full name
+    vendor_name: Optional[str] = None  # business/shop name
+    mobile_no: str
+    address: Optional[str] = None
+    city: Optional[str] = None
+    pincode: Optional[str] = None
+    profile_photo_url: Optional[str] = None

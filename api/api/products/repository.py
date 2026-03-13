@@ -120,6 +120,7 @@ class ProductRepository:
         count_row = await conn.fetchrow(f"SELECT COUNT(*) FROM products WHERE {where}", *params)
         total = count_row[0]
         offset = (page - 1) * page_size
+        print(f"SELECT * FROM products WHERE {where} ORDER BY created_at DESC LIMIT ${idx} OFFSET ${idx + 1}")
         rows = await conn.fetch(
             f"SELECT * FROM products WHERE {where} ORDER BY created_at DESC LIMIT ${idx} OFFSET ${idx + 1}",
             *params,

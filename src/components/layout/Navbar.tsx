@@ -15,7 +15,7 @@ import {
   Sun
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCartStore, useAuthStore, useSearchStore, useLocationStore, useThemeStore } from "@/stores";
+import { useCartStore, useAuthStore, useSearchStore, useLocationStore, useThemeStore, useRentalDatesStore } from "@/stores";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -44,15 +44,15 @@ const categories = [
 export function Navbar() {
   const [tempLocation, setTempLocation] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [rentalStartDate, setRentalStartDate] = useState("");
-  const [rentalEndDate, setRentalEndDate] = useState("");
-  
+  const [rentalPopoverOpen, setRentalPopoverOpen] = useState(false);
+
   // Zustand stores
   const cartItemCount = useCartStore(state => state.getItemCount());
   const { user, isAuthenticated, logout } = useAuthStore();
   const { query, setQuery, addToRecentSearches } = useSearchStore();
   const { location, setLocation } = useLocationStore();
   const { theme, toggleTheme } = useThemeStore();
+  const { startDate: rentalStartDate, endDate: rentalEndDate, setStartDate, setEndDate, setDates, getDays } = useRentalDatesStore();
   
   // Apply theme on mount
   useEffect(() => {
@@ -73,14 +73,13 @@ export function Navbar() {
   
   const handleRentalDatesApply = () => {
     if (rentalStartDate && rentalEndDate) {
-      console.log("📅 Rental period selected:", {
+      setDates(rentalStartDate, rentalEndDate);
+      setRentalPopoverOpen(false);
+      console.log("📅 Rental period set:", {
         startDate: rentalStartDate,
         endDate: rentalEndDate,
-        days: Math.ceil((new Date(rentalEndDate).getTime() - new Date(rentalStartDate).getTime()) / (1000 * 60 * 60 * 24))
+        days: getDays(),
       });
-      alert(`Rental period: ${rentalStartDate} to ${rentalEndDate}`);
-    } else {
-      alert("Please select both start and end dates");
     }
   };
 
@@ -245,12 +244,12 @@ export function Navbar() {
             </button>
 
             {/* Rental Period (Replaces Returns & Orders) */}
-            <Popover>
+            <Popover open={rentalPopoverOpen} onOpenChange={setRentalPopoverOpen}>
               <PopoverTrigger className="hidden md:flex flex-col items-start h-auto py-1 px-3 hover:bg-purple-50 dark:hover:bg-slate-800 rounded-md cursor-pointer group whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50">
                 <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal group-hover:text-primary dark:group-hover:text-purple-400">Rental Period</span>
                 <span className="text-sm font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
                   <CalendarDays className="h-4 w-4 text-primary dark:text-purple-400" />
-                  {rentalStartDate && rentalEndDate ? `${rentalStartDate} - ${rentalEndDate}` : "Select Dates"}
+                  {rentalStartDate && rentalEndDate ? `${getDays()} days` : "Select Dates"}
                 </span>
               </PopoverTrigger>
               <PopoverContent className="w-80 p-4 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700" align="end">
@@ -263,31 +262,30 @@ export function Navbar() {
                     <div className="grid grid-cols-2 gap-2">
                       <div className="grid gap-1">
                         <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">Start Date</span>
-                        <Input 
-                          type="date" 
-                          className="h-8 text-xs dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200" 
+                        <Input
+                          type="date"
+                          className="h-8 text-xs dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
                           value={rentalStartDate}
-                          onChange={(e) => {
-                            setRentalStartDate(e.target.value);
-                            console.log("📅 Start date selected:", e.target.value);
-                          }}
+                          onChange={(e) => setStartDate(e.target.value)}
                           min={new Date().toISOString().split('T')[0]}
                         />
                       </div>
                       <div className="grid gap-1">
                         <span className="text-[10px] uppercase font-bold text-slate-500 dark:text-slate-400">End Date</span>
-                        <Input 
-                          type="date" 
-                          className="h-8 text-xs dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200" 
+                        <Input
+                          type="date"
+                          className="h-8 text-xs dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
                           value={rentalEndDate}
-                          onChange={(e) => {
-                            setRentalEndDate(e.target.value);
-                            console.log("📅 End date selected:", e.target.value);
-                          }}
+                          onChange={(e) => setEndDate(e.target.value)}
                           min={rentalStartDate || new Date().toISOString().split('T')[0]}
                         />
                       </div>
                     </div>
+                    {rentalStartDate && rentalEndDate && (
+                      <p className="text-xs text-primary dark:text-purple-400 font-medium text-center">
+                        {getDays()} day{getDays() !== 1 ? "s" : ""} selected
+                      </p>
+                    )}
                     <Button size="sm" className="w-full mt-2 dark:bg-purple-700 dark:hover:bg-purple-600" onClick={handleRentalDatesApply}>
                       Apply Dates
                     </Button>

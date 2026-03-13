@@ -253,3 +253,23 @@ export async function updateDevice(
 export async function deleteDevice(token: string, deviceId: string): Promise<void> {
   await apiFetch<void>(`/devices/${deviceId}`, { method: "DELETE" }, token);
 }
+
+// ---------------------------------------------------------------------------
+// Public Vendor Profile
+// ---------------------------------------------------------------------------
+
+export interface VendorPublicProfile {
+  id: string;
+  name: string;
+  vendor_name: string | null;
+  mobile_no: string;
+  address: string | null;
+  city: string | null;
+  pincode: string | null;
+  profile_photo_url: string | null;
+}
+
+export async function getVendorPublicProfile(vendorId: string): Promise<VendorPublicProfile> {
+  const data = await apiFetch<VendorPublicProfile>(`/users/vendors/${vendorId}/profile`);
+  return data;
+}

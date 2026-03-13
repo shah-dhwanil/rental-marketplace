@@ -257,3 +257,16 @@ async def admin_set_status(
 )
 async def admin_delete(user_id: str, claims: AdminDep, service: UserServiceDep):
     await service.admin_delete_user(user_id, claims.user_id)
+
+
+# ---------------------------------------------------------------------------
+# Public vendor profile (no auth required)
+# ---------------------------------------------------------------------------
+
+@router.get(
+    "/vendors/{vendor_id}/profile",
+    status_code=status.HTTP_200_OK,
+    summary="Public — Get vendor public profile",
+)
+async def get_vendor_public_profile(vendor_id: str, service: UserServiceDep):
+    return await service.get_vendor_public_profile(vendor_id)

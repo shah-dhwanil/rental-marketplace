@@ -1,7 +1,7 @@
 import { createBrowserRouter } from "react-router";
 import { MainLayout } from "./components/layout/MainLayout";
 import { Home } from "./pages/Home";
-import { homeLoader } from "./loaders";
+import { homeLoader, productDetailLoader, categoryLoader, searchLoader } from "./loaders";
 import { LoginLandingPage } from "./pages/auth/LoginLandingPage";
 import { CustomerLoginPage } from "./pages/auth/CustomerLoginPage";
 import { VendorLoginPage } from "./pages/auth/VendorLoginPage";
@@ -12,6 +12,10 @@ import { VendorSignupPage } from "./pages/auth/VendorSignupPage";
 import { DeliveryPartnerSignupPage } from "./pages/auth/DeliveryPartnerSignupPage";
 import { ProfilePage } from "./pages/profile/ProfilePage";
 import { EditProfilePage } from "./pages/profile/EditProfilePage";
+import { ProductDetailPage } from "./pages/ProductDetailPage";
+import { CategoryPage } from "./pages/CategoryPage";
+import { SearchPage } from "./pages/SearchPage";
+import { WishlistPage } from "./pages/WishlistPage";
 import { VendorDashboardLayout } from "./pages/vendor-dashboard/VendorDashboardLayout";
 import { VendorOverviewPage } from "./pages/vendor-dashboard/VendorOverviewPage";
 import { VendorProductsPage } from "./pages/vendor-dashboard/VendorProductsPage";
@@ -44,6 +48,25 @@ const router = createBrowserRouter([
         index: true,
         element: <Home />,
         loader: homeLoader,
+      },
+      {
+        path: "product/:id",
+        element: <ProductDetailPage />,
+        loader: productDetailLoader,
+      },
+      {
+        path: "category/:slug",
+        element: <CategoryPage />,
+        loader: categoryLoader,
+      },
+      {
+        path: "search",
+        element: <SearchPage />,
+        loader: searchLoader,
+      },
+      {
+        path: "wishlist",
+        element: <WishlistPage />,
       },
     ],
   },

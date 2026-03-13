@@ -686,6 +686,35 @@ class UserService:
             raise UnkownAppException() from exc
 
 
+
+    # -----------------------------------------------------------------------
+    # Public vendor profile lookup
+    # -----------------------------------------------------------------------
+
+    async def get_vendor_public_profile(self, vendor_id: str) -> dict:
+        try:
+            user = await self._repo.find_by_id(UUID(vendor_id))
+            if not user or user["role"] != "vendor" or not user["is_active"]:
+                raise UserNotFoundException(vendor_id)
+
+            vendor = await self._repo.find_vendor(UUID(vendor_id))
+
+            return {
+                "id": str(user["id"]),
+                "name": user["name"],
+                "vendor_name": vendor.get("name") if vendor else None,
+                "mobile_no": user["mobile_no"],
+                "address": vendor.get("address") if vendor else None,
+                "city": vendor.get("city") if vendor else None,
+                "pincode": vendor.get("pincode") if vendor else None,
+                "profile_photo_url": user.get("profile_photo_url"),
+            }
+        except AppException:
+            raise
+        except Exception as exc:
+            logger.error("get_vendor_public_profile_failed", exc_info=True)
+            raise UnkownAppException() from exc
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -734,3 +763,4 @@ def _dp_extras(dp: Optional[dict]) -> dict:
         "lng": dp.get("lng"),
         "is_business_verified": dp.get("is_verified", False),
     }
+

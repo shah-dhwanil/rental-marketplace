@@ -1,6 +1,5 @@
 import { type LoaderFunctionArgs } from "react-router";
-import { getProducts } from "@/services/product.service";
-import { getCategoryBySlug, getCategories } from "@/services/category.service";
+import { listAllProducts, listCategories } from "@/services/catalog.service";
 
 /**
  * Category page loader
@@ -9,42 +8,42 @@ import { getCategoryBySlug, getCategories } from "@/services/category.service";
 export async function categoryLoader({ params, request }: LoaderFunctionArgs) {
   const { slug } = params;
   const url = new URL(request.url);
-  
+
   if (!slug) {
     throw new Response("Category slug is required", { status: 400 });
   }
-  
+
   // Parse query parameters for filtering
-  const filters = {
-    category: slug as any, // Type assertion for category enum
-    minPrice: url.searchParams.get("minPrice") 
-      ? Number(url.searchParams.get("minPrice")) 
-      : undefined,
-    maxPrice: url.searchParams.get("maxPrice") 
-      ? Number(url.searchParams.get("maxPrice")) 
-      : undefined,
-    condition: url.searchParams.get("condition") as any || undefined,
-    sortBy: url.searchParams.get("sortBy") as any || undefined,
-    page: url.searchParams.get("page") 
-      ? Number(url.searchParams.get("page")) 
-      : 1,
-    pageSize: 24,
-  };
-  
-  const [category, products, allCategories] = await Promise.all([
-    getCategoryBySlug(slug),
-    getProducts(filters),
-    getCategories(),
-  ]);
-  
-  if (!category) {
+  const page = url.searchParams.get("page") ? Number(url.searchParams.get("page")) : 1;
+  const pageSize = 24;
+
+  try {
+    // Fetch all categories to find by slug
+    const allCategoriesResponse = await listCategories({ page: 1, page_size: 100 });
+    const category = allCategoriesResponse.items.find(
+      (cat: any) => cat.slug === slug
+    );
+
+    if (!category) {
+      throw new Response("Category not found", { status: 404 });
+    }
+
+    // Fetch products for this category
+    const productsResponse = await listAllProducts({
+      page,
+      page_size: pageSize,
+      category_id: category.id,
+      is_active: true,
+    });
+
+    return {
+      category,
+      products: productsResponse.items,
+      pagination: productsResponse.pagination,
+    };
+  } catch (error) {
+    console.error("Failed to load category:", error);
     throw new Response("Category not found", { status: 404 });
   }
-  
-  return {
-    category,
-    products,
-    allCategories,
-    filters,
-  };
 }
+
