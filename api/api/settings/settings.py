@@ -11,6 +11,7 @@ from pydantic_settings import (
 
 from api.settings.cloudinary import CloudinaryConfig
 from api.settings.database import DatabaseConfig
+from api.settings.encryption import EncryptionConfig
 from api.settings.server import ServerConfig
 from api.settings.jwt import JWTConfig
 
@@ -76,6 +77,9 @@ class Settings(BaseSettings):
     )
     CLOUDINARY: CloudinaryConfig = Field(
         default_factory=CloudinaryConfig, description="Cloudinary media storage settings"
+    )
+    ENCRYPTION: EncryptionConfig = Field(
+        default_factory=EncryptionConfig, description="Encryption settings for sensitive data"
     )
 
     model_config = SettingsConfigDict(

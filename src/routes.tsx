@@ -25,6 +25,10 @@ import { VendorProductDevicesPage } from "./pages/vendor-dashboard/VendorProduct
 import { VendorCreateDevicePage } from "./pages/vendor-dashboard/VendorCreateDevicePage";
 import { VendorDevicesPage } from "./pages/vendor-dashboard/VendorDevicesPage";
 import { VendorEditDevicePage } from "./pages/vendor-dashboard/VendorEditDevicePage";
+import { VendorPromoCodesPage } from "./pages/vendor-dashboard/VendorPromoCodesPage";
+import { VendorCreatePromoPage } from "./pages/vendor-dashboard/VendorCreatePromoPage";
+import { VendorEditPromoPage } from "./pages/vendor-dashboard/VendorEditPromoPage";
+import { CartPage } from "./pages/CartPage";
 import { AdminDashboardLayout } from "./pages/admin-dashboard/AdminDashboardLayout";
 import { AdminOverviewPage } from "./pages/admin-dashboard/AdminOverviewPage";
 import { AdminUsersPage } from "./pages/admin-dashboard/AdminUsersPage";
@@ -68,6 +72,10 @@ const router = createBrowserRouter([
         path: "wishlist",
         element: <WishlistPage />,
       },
+      {
+        path: "cart",
+        element: <CartPage />,
+      },
     ],
   },
 
@@ -106,6 +114,11 @@ const router = createBrowserRouter([
       // Devices (cross-product view)
       { path: "devices", element: <VendorDevicesPage /> },
       { path: "devices/:deviceId/edit", element: <VendorEditDevicePage /> },
+
+      // Promo Codes
+      { path: "promos", element: <VendorPromoCodesPage /> },
+      { path: "promos/create", element: <VendorCreatePromoPage /> },
+      { path: "promos/:promoId/edit", element: <VendorEditPromoPage /> },
     ],
   },
 

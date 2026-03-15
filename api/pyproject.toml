@@ -17,4 +17,5 @@ dependencies = [
     "structlog>=25.5.0",
     "uvicorn>=0.41.0",
     "shapely>=2.1.2",
+    "pycryptodome>=3.23.0",
 ]

@@ -3,6 +3,7 @@ import { Heart, Trash2, ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useWishlistStore, useCartStore, useRentalDatesStore } from "@/stores";
+import { useAuthStore } from "@/stores/auth.store";
 import { listAllProducts } from "@/services/catalog.service";
 import { useEffect, useState } from "react";
 
@@ -18,7 +19,8 @@ interface WishlistProduct {
 }
 
 export function WishlistPage() {
-  const { productIds, removeFromWishlist } = useWishlistStore();
+  const { productIds, toggleWishlist, syncFromServer } = useWishlistStore();
+  const { isAuthenticated } = useAuthStore();
   const { addToCart } = useCartStore();
   const { startDate, endDate, getDays } = useRentalDatesStore();
   const [products, setProducts] = useState<WishlistProduct[]>([]);
@@ -27,6 +29,13 @@ export function WishlistPage() {
   const today = new Date().toISOString().split("T")[0];
   const oneWeekLater = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
   const days = getDays() || 7;
+
+  // Sync wishlist from server on mount when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      syncFromServer();
+    }
+  }, [isAuthenticated, syncFromServer]);
 
   useEffect(() => {
     if (productIds.length === 0) {
@@ -52,7 +61,7 @@ export function WishlistPage() {
   }, [productIds]);
 
   const handleRemoveFromWishlist = (productId: string) => {
-    removeFromWishlist(productId);
+    toggleWishlist(productId);
   };
 
   const handleAddToCart = (product: WishlistProduct) => {
