@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router";
-import { 
-  Search, 
-  MapPin, 
-  Menu, 
-  ShoppingCart, 
-  User, 
+import { Link, useNavigate, useLocation, useSearchParams } from "react-router";
+import {
+  Search,
+  MapPin,
+  Menu,
+  ShoppingCart,
+  User,
   ChevronDown,
   Store,
   HelpCircle,
@@ -31,6 +31,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { searchPlaces } from "@/lib/mappls";
 
 const categories = [
   { name: "Camera & Gear", icon: "📷", sub: ["DSLR", "Lenses", "Tripods", "Drones"] },
@@ -43,17 +44,22 @@ const categories = [
 
 export function Navbar() {
   const [tempLocation, setTempLocation] = useState("");
+  const [locationLoading, setLocationLoading] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [rentalPopoverOpen, setRentalPopoverOpen] = useState(false);
+
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Zustand stores
   const cartItemCount = useCartStore(state => state.getItemCount());
   const { user, isAuthenticated, logout } = useAuthStore();
   const { query, setQuery, addToRecentSearches } = useSearchStore();
-  const { location, setLocation } = useLocationStore();
+  const { location, lat, lng, setLocation, setCoords } = useLocationStore();
   const { theme, toggleTheme } = useThemeStore();
   const { startDate: rentalStartDate, endDate: rentalEndDate, setStartDate, setEndDate, setDates, getDays } = useRentalDatesStore();
-  
+
   // Apply theme on mount
   useEffect(() => {
     if (theme === 'dark') {
@@ -62,25 +68,67 @@ export function Navbar() {
       document.documentElement.classList.remove('dark');
     }
   }, [theme]);
-  
-  const handleLocationChange = () => {
-    if (tempLocation.trim()) {
-      setLocation(tempLocation);
-      console.log("📍 Location changed to:", tempLocation);
-      alert(`Location updated to: ${tempLocation}`);
+
+  // Build query params for /search navigation using current filter state
+  const buildSearchParams = (overrideQuery?: string) => {
+    const p: Record<string, string> = {};
+    const q = overrideQuery !== undefined ? overrideQuery : query;
+    if (q.trim()) p.q = q.trim();
+    if (rentalStartDate) p.start_date = rentalStartDate;
+    if (rentalEndDate) p.end_date = rentalEndDate;
+    if (lat !== null && lng !== null) {
+      p.lat = String(lat);
+      p.lng = String(lng);
+      if (location) p.pincode = location;
+    }
+    return p;
+  };
+
+  // True on any product-listing page (search or category browse)
+  const isListingPage = pathname === '/search' || pathname.startsWith('/category/');
+
+  const handleLocationChange = async () => {
+    if (!tempLocation.trim()) return;
+    setLocationLoading(true);
+    setLocation(tempLocation.trim());
+    try {
+      const results = await searchPlaces(tempLocation.trim());
+      if (results.length) {
+        const { lat: newLat, lng: newLng } = results[0];
+        setCoords(newLat, newLng);
+        if (isListingPage) {
+          const sp = new URLSearchParams(searchParams);
+          sp.set('lat', String(newLat));
+          sp.set('lng', String(newLng));
+          sp.set('pincode', tempLocation.trim());
+          setSearchParams(sp);
+        }
+      }
+    } catch {
+      // geocoding failed silently
+    } finally {
+      setLocationLoading(false);
     }
   };
-  
+
   const handleRentalDatesApply = () => {
     if (rentalStartDate && rentalEndDate) {
       setDates(rentalStartDate, rentalEndDate);
       setRentalPopoverOpen(false);
-      console.log("📅 Rental period set:", {
-        startDate: rentalStartDate,
-        endDate: rentalEndDate,
-        days: getDays(),
-      });
+      if (isListingPage) {
+        const sp = new URLSearchParams(searchParams);
+        sp.set('start_date', rentalStartDate);
+        sp.set('end_date', rentalEndDate);
+        setSearchParams(sp);
+      }
     }
+  };
+
+  const handleSearchSubmit = () => {
+    if (!query.trim()) return;
+    addToRecentSearches(query);
+    const p = buildSearchParams();
+    navigate(`/search?${new URLSearchParams(p).toString()}`);
   };
 
   return (
@@ -165,16 +213,16 @@ export function Navbar() {
                 Delivery options and inventory availability depend on your location.
               </p>
               <div className="flex gap-2">
-                <Input 
-                  placeholder="Enter pincode or city" 
-                  className="h-9 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200" 
+                <Input
+                  placeholder="Enter pincode or city"
+                  className="h-9 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-200"
                   value={tempLocation}
-                  onChange={(e) => {
-                    setTempLocation(e.target.value);
-                    console.log("📍 Location input:", e.target.value);
-                  }}
+                  onChange={(e) => setTempLocation(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleLocationChange(); }}
                 />
-                <Button size="sm" onClick={handleLocationChange} className="dark:bg-purple-700 dark:hover:bg-purple-600">Apply</Button>
+                <Button size="sm" onClick={handleLocationChange} disabled={locationLoading} className="dark:bg-purple-700 dark:hover:bg-purple-600">
+                  {locationLoading ? "..." : "Apply"}
+                </Button>
               </div>
             </PopoverContent>
           </Popover>
@@ -198,26 +246,19 @@ export function Navbar() {
                 placeholder="Search for cameras, laptops, drones..."
                 className="border-0 focus-visible:ring-0 bg-white dark:bg-slate-900 dark:text-slate-200 dark:placeholder:text-slate-500 px-4 h-10 text-sm w-full rounded-none"
                 value={query}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  setQuery(value);
-                  console.log("🔍 Search query:", value);
-                  if (value.trim()) {
-                    console.log("Search state updated - Value:", value);
-                  }
-                }}
+                onChange={(e) => setQuery(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && query.trim()) {
-                    addToRecentSearches(query);
-                    console.log("🔍 Search submitted:", query);
-                    console.log("Recent searches updated");
-                  }
+                  if (e.key === 'Enter') handleSearchSubmit();
                 }}
                 onFocus={() => setIsSearchFocused(true)}
                 onBlur={() => setIsSearchFocused(false)}
               />
-              
-              <Button size="icon" className="h-10 w-12 rounded-none bg-primary text-white hover:bg-purple-700 transition-colors border-l border-primary">
+
+              <Button
+                size="icon"
+                className="h-10 w-12 rounded-none bg-primary text-white hover:bg-purple-700 transition-colors border-l border-primary"
+                onClick={handleSearchSubmit}
+              >
                 <Search className="h-5 w-5" />
               </Button>
             </div>

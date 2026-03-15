@@ -12,6 +12,7 @@ from pydantic_settings import (
 from api.settings.cloudinary import CloudinaryConfig
 from api.settings.database import DatabaseConfig
 from api.settings.encryption import EncryptionConfig
+from api.settings.search import SearchConfig
 from api.settings.server import ServerConfig
 from api.settings.jwt import JWTConfig
 from api.settings.stripe import StripeConfig
@@ -84,6 +85,9 @@ class Settings(BaseSettings):
     )
     STRIPE: StripeConfig = Field(
         default_factory=StripeConfig, description="Stripe payment gateway settings"
+    )
+    SEARCH: SearchConfig = Field(
+        default_factory=SearchConfig, description="Search and geolocation settings"
     )
 
     model_config = SettingsConfigDict(

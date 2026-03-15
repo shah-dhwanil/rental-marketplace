@@ -1,6 +1,7 @@
 """Product and Device repository — all database access for the products domain."""
 
 import json
+from datetime import date
 from typing import Optional
 from uuid import UUID
 
@@ -77,13 +78,24 @@ class ProductRepository:
         category_id: Optional[UUID] = None,
         is_active: Optional[bool] = None,
         q: Optional[str] = None,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+        lat: Optional[float] = None,
+        lng: Optional[float] = None,
+        radius_km: Optional[float] = None,
         *,
         conn: Optional[asyncpg.Connection] = None,
     ) -> tuple[list[dict], int]:
         if conn is None:
             async with self._db.acquire() as _conn:
-                return await self._list_products(_conn, page, page_size, vendor_id, category_id, is_active, q)
-        return await self._list_products(conn, page, page_size, vendor_id, category_id, is_active, q)
+                return await self._list_products(
+                    _conn, page, page_size, vendor_id, category_id, is_active, q,
+                    start_date, end_date, lat, lng, radius_km,
+                )
+        return await self._list_products(
+            conn, page, page_size, vendor_id, category_id, is_active, q,
+            start_date, end_date, lat, lng, radius_km,
+        )
 
     async def _list_products(
         self,
@@ -94,35 +106,79 @@ class ProductRepository:
         category_id: Optional[UUID],
         is_active: Optional[bool],
         q: Optional[str],
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+        lat: Optional[float] = None,
+        lng: Optional[float] = None,
+        radius_km: Optional[float] = None,
     ) -> tuple[list[dict], int]:
-        conditions = ["is_deleted = FALSE"]
+        conditions = ["p.is_deleted = FALSE"]
         params: list = []
         idx = 1
 
         if vendor_id is not None:
-            conditions.append(f"vendor_id = ${idx}")
+            conditions.append(f"p.vendor_id = ${idx}")
             params.append(vendor_id)
             idx += 1
         if category_id is not None:
-            conditions.append(f"category_id = ${idx}")
+            conditions.append(f"p.category_id = ${idx}")
             params.append(category_id)
             idx += 1
         if is_active is not None:
-            conditions.append(f"is_active = ${idx}")
+            conditions.append(f"p.is_active = ${idx}")
             params.append(is_active)
             idx += 1
         if q:
-            conditions.append(f"name ILIKE ${idx}")
+            conditions.append(f"p.name ILIKE ${idx}")
             params.append(f"%{q}%")
             idx += 1
 
+        # Availability filter: product must have at least one active, unbooked device
+        if start_date is not None and end_date is not None:
+            conditions.append(
+                f"""EXISTS (
+                    SELECT 1 FROM devices d
+                    WHERE d.product_id = p.id
+                      AND d.is_deleted = FALSE
+                      AND d.is_active = TRUE
+                      AND NOT EXISTS (
+                          SELECT 1 FROM orders o
+                          WHERE o.device_id = d.id
+                            AND o.status IN ('confirmed', 'active')
+                            AND o.start_date <= ${idx + 1}
+                            AND o.end_date >= ${idx}
+                      )
+                )"""
+            )
+            params.append(start_date)   # ${idx}   — rental start
+            params.append(end_date)     # ${idx+1} — rental end
+            idx += 2
+
+        # Geo filter: vendor must be within radius_km of (lat, lng)
+        if lat is not None and lng is not None:
+            radius_m = (radius_km or 20.0) * 1000
+            conditions.append(
+                f"""p.vendor_id IN (
+                    SELECT v.id FROM vendors v
+                    WHERE v.is_deleted = FALSE
+                      AND ST_DWithin(
+                          v.location::geography,
+                          ST_SetSRID(ST_MakePoint(${idx + 1}, ${idx}), 4326)::geography,
+                          ${idx + 2}
+                      )
+                )"""
+            )
+            params.append(lat)       # ${idx}
+            params.append(lng)       # ${idx+1}
+            params.append(radius_m)  # ${idx+2}
+            idx += 3
+
         where = " AND ".join(conditions)
-        count_row = await conn.fetchrow(f"SELECT COUNT(*) FROM products WHERE {where}", *params)
+        count_row = await conn.fetchrow(f"SELECT COUNT(*) FROM products p WHERE {where}", *params)
         total = count_row[0]
         offset = (page - 1) * page_size
-        print(f"SELECT * FROM products WHERE {where} ORDER BY created_at DESC LIMIT ${idx} OFFSET ${idx + 1}")
         rows = await conn.fetch(
-            f"SELECT * FROM products WHERE {where} ORDER BY created_at DESC LIMIT ${idx} OFFSET ${idx + 1}",
+            f"SELECT p.* FROM products p WHERE {where} ORDER BY p.created_at DESC LIMIT ${idx} OFFSET ${idx + 1}",
             *params,
             page_size,
             offset,

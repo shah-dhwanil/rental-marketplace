@@ -100,6 +100,10 @@ export async function listAllProducts(params?: {
   category_id?: string;
   is_active?: boolean;
   q?: string;
+  start_date?: string;
+  end_date?: string;
+  lat?: number;
+  lng?: number;
 }): Promise<PaginatedProducts> {
   const qs = new URLSearchParams();
   if (params?.page) qs.set("page", String(params.page));
@@ -107,6 +111,10 @@ export async function listAllProducts(params?: {
   if (params?.category_id) qs.set("category_id", params.category_id);
   if (params?.is_active !== undefined) qs.set("is_active", String(params.is_active));
   if (params?.q) qs.set("q", params.q);
+  if (params?.start_date) qs.set("start_date", params.start_date);
+  if (params?.end_date) qs.set("end_date", params.end_date);
+  if (params?.lat !== undefined) qs.set("lat", String(params.lat));
+  if (params?.lng !== undefined) qs.set("lng", String(params.lng));
   const data = await apiFetch<unknown>(`/products?${qs.toString()}`);
   return PaginatedProductsSchema.parse(data);
 }

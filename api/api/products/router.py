@@ -1,5 +1,6 @@
 """Products and Devices router."""
 
+from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, File, Query, UploadFile, status
@@ -13,6 +14,7 @@ from api.products.models.requests import (
     UpdateProductRequest,
 )
 from api.products.models.responses import DeviceResponse, ProductResponse, ProductSummaryResponse
+from api.settings.settings import get_settings
 
 router = APIRouter(tags=["Products & Devices"])
 
@@ -33,8 +35,18 @@ async def list_products(
     category_id: Optional[str] = Query(default=None),
     is_active: Optional[bool] = Query(default=None),
     q: Optional[str] = Query(default=None, max_length=100),
+    start_date: Optional[date] = Query(default=None, description="Rental start date (YYYY-MM-DD)"),
+    end_date: Optional[date] = Query(default=None, description="Rental end date (YYYY-MM-DD)"),
+    lat: Optional[float] = Query(default=None, ge=-90, le=90, description="Latitude for geo filter"),
+    lng: Optional[float] = Query(default=None, ge=-180, le=180, description="Longitude for geo filter"),
 ):
-    return await service.list_products(page, page_size, category_id=category_id, is_active=is_active, q=q)
+    radius_km = get_settings().SEARCH.GEOCODE_RADIUS_KM
+    return await service.list_products(
+        page, page_size,
+        category_id=category_id, is_active=is_active, q=q,
+        start_date=start_date, end_date=end_date,
+        lat=lat, lng=lng, radius_km=radius_km,
+    )
 
 
 @router.get(

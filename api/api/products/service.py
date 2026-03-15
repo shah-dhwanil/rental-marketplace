@@ -1,6 +1,7 @@
 """Product and Device service — business logic for the products domain."""
 
 import json
+from datetime import date
 from typing import Optional
 from uuid import UUID
 
@@ -137,11 +138,19 @@ class ProductService:
         category_id: Optional[str] = None,
         is_active: Optional[bool] = None,
         q: Optional[str] = None,
+        start_date: Optional[date] = None,
+        end_date: Optional[date] = None,
+        lat: Optional[float] = None,
+        lng: Optional[float] = None,
+        radius_km: Optional[float] = None,
     ) -> PaginatedResponse[ProductSummaryResponse]:
         try:
             vid = UUID(vendor_id) if vendor_id else None
             cid = UUID(category_id) if category_id else None
-            rows, total = await self._repo.list_products(page, page_size, vid, cid, is_active, q)
+            rows, total = await self._repo.list_products(
+                page, page_size, vid, cid, is_active, q,
+                start_date, end_date, lat, lng, radius_km,
+            )
             return PaginatedResponse(
                 items=[_row_to_summary(r) for r in rows],
                 total=total,
