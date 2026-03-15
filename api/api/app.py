@@ -20,6 +20,7 @@ from api.addresses.router import router as addresses_router
 from api.payments.router import router as payments_router
 from api.promos.router import router as promos_router
 from api.wishlists.router import router as wishlists_router
+from api.orders.router import router as orders_router
 
 # Load settings
 settings = get_settings()
@@ -69,6 +70,7 @@ def create_app() -> FastAPI:
     app.include_router(payments_router)
     app.include_router(promos_router)
     app.include_router(wishlists_router)
+    app.include_router(orders_router)
     return app
 
 

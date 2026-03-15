@@ -5,6 +5,7 @@ import {
   Users,
   FolderTree,
   Package,
+  ShoppingBag,
   Menu,
   X,
   LogOut,
@@ -32,6 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Users", href: "/admin/dashboard/users", icon: Users },
   { label: "Categories", href: "/admin/dashboard/categories", icon: FolderTree },
   { label: "Products", href: "/admin/dashboard/products", icon: Package },
+  { label: "Orders", href: "/admin/dashboard/orders", icon: ShoppingBag },
 ];
 
 function SidebarContent({

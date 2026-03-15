@@ -33,7 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Products", href: "/vendor/dashboard/products", icon: Package },
   { label: "Devices", href: "/vendor/dashboard/devices", icon: Cpu },
   { label: "Promo Codes", href: "/vendor/dashboard/promos", icon: Tag },
-  { label: "Orders", href: "/vendor/dashboard/orders", icon: ShoppingBag, disabled: true, badge: "Soon" },
+  { label: "Orders", href: "/vendor/dashboard/orders", icon: ShoppingBag },
   { label: "Analytics", href: "/vendor/dashboard/analytics", icon: BarChart2, disabled: true, badge: "Soon" },
   { label: "Settings", href: "/vendor/dashboard/settings", icon: Settings, disabled: true, badge: "Soon" },
 ];

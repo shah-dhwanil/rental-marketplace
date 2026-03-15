@@ -366,7 +366,7 @@ export function Navbar() {
                    <div className="p-2 border-l">
                       <div className="font-bold mb-2 text-slate-900">Your Account</div>
                       <div className="space-y-1 text-slate-600">
-                        <div className="hover:text-primary hover:underline cursor-pointer">Your Orders</div>
+                        <Link to="/orders" className="block hover:text-primary hover:underline cursor-pointer">Your Orders</Link>
                         <div className="hover:text-primary hover:underline cursor-pointer">Your Rentals</div>
                         <div className="hover:text-primary hover:underline cursor-pointer">Returns</div>
                       </div>

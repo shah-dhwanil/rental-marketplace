@@ -14,6 +14,7 @@ from api.settings.database import DatabaseConfig
 from api.settings.encryption import EncryptionConfig
 from api.settings.server import ServerConfig
 from api.settings.jwt import JWTConfig
+from api.settings.stripe import StripeConfig
 
 
 class TomlConfigSettingsSource(PydanticBaseSettingsSource):
@@ -80,6 +81,9 @@ class Settings(BaseSettings):
     )
     ENCRYPTION: EncryptionConfig = Field(
         default_factory=EncryptionConfig, description="Encryption settings for sensitive data"
+    )
+    STRIPE: StripeConfig = Field(
+        default_factory=StripeConfig, description="Stripe payment gateway settings"
     )
 
     model_config = SettingsConfigDict(

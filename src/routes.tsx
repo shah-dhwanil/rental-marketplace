@@ -12,6 +12,8 @@ import { VendorSignupPage } from "./pages/auth/VendorSignupPage";
 import { DeliveryPartnerSignupPage } from "./pages/auth/DeliveryPartnerSignupPage";
 import { ProfilePage } from "./pages/profile/ProfilePage";
 import { EditProfilePage } from "./pages/profile/EditProfilePage";
+import { AddressesPage } from "./pages/profile/AddressesPage";
+import { PaymentMethodsPage } from "./pages/profile/PaymentMethodsPage";
 import { ProductDetailPage } from "./pages/ProductDetailPage";
 import { CategoryPage } from "./pages/CategoryPage";
 import { SearchPage } from "./pages/SearchPage";
@@ -29,7 +31,15 @@ import { VendorPromoCodesPage } from "./pages/vendor-dashboard/VendorPromoCodesP
 import { VendorCreatePromoPage } from "./pages/vendor-dashboard/VendorCreatePromoPage";
 import { VendorEditPromoPage } from "./pages/vendor-dashboard/VendorEditPromoPage";
 import { CartPage } from "./pages/CartPage";
+import { CheckoutPage } from "./pages/CheckoutPage";
+import { OrderConfirmationPage } from "./pages/OrderConfirmationPage";
+import { CustomerOrdersPage } from "./pages/orders/CustomerOrdersPage";
+import { CustomerOrderDetailPage } from "./pages/orders/CustomerOrderDetailPage";
+import { VendorOrdersPage } from "./pages/vendor-dashboard/VendorOrdersPage";
+import { VendorOrderDetailPage } from "./pages/vendor-dashboard/VendorOrderDetailPage";
 import { AdminDashboardLayout } from "./pages/admin-dashboard/AdminDashboardLayout";
+import { AdminOrdersPage } from "./pages/admin-dashboard/AdminOrdersPage";
+import { AdminOrderDetailPage } from "./pages/admin-dashboard/AdminOrderDetailPage";
 import { AdminOverviewPage } from "./pages/admin-dashboard/AdminOverviewPage";
 import { AdminUsersPage } from "./pages/admin-dashboard/AdminUsersPage";
 import { AdminUserDetailPage } from "./pages/admin-dashboard/AdminUserDetailPage";
@@ -76,8 +86,20 @@ const router = createBrowserRouter([
         path: "cart",
         element: <CartPage />,
       },
+      {
+        path: "orders",
+        element: <CustomerOrdersPage />,
+      },
+      {
+        path: "orders/:orderId",
+        element: <CustomerOrderDetailPage />,
+      },
     ],
   },
+
+  // ── Checkout & Order Confirmation (standalone, no main navbar) ────────────
+  { path: "/checkout", element: <CheckoutPage /> },
+  { path: "/orders/confirmation", element: <OrderConfirmationPage /> },
 
   // ── Login — role selection landing page ───────────────────────────────────
   { path: "/login", element: <LoginLandingPage /> },
@@ -96,6 +118,8 @@ const router = createBrowserRouter([
   // ── Profile (authenticated) ───────────────────────────────────────────────
   { path: "/profile", element: <ProfilePage /> },
   { path: "/profile/edit", element: <EditProfilePage /> },
+  { path: "/profile/addresses", element: <AddressesPage /> },
+  { path: "/profile/payment-methods", element: <PaymentMethodsPage /> },
 
   // ── Vendor Dashboard ─────────────────────────────────────────────────────
   {
@@ -119,6 +143,10 @@ const router = createBrowserRouter([
       { path: "promos", element: <VendorPromoCodesPage /> },
       { path: "promos/create", element: <VendorCreatePromoPage /> },
       { path: "promos/:promoId/edit", element: <VendorEditPromoPage /> },
+
+      // Orders
+      { path: "orders", element: <VendorOrdersPage /> },
+      { path: "orders/:orderId", element: <VendorOrderDetailPage /> },
     ],
   },
 
@@ -146,6 +174,10 @@ const router = createBrowserRouter([
 
       // Devices (cross-product edit)
       { path: "devices/:deviceId/edit", element: <AdminEditDevicePage /> },
+
+      // Orders
+      { path: "orders", element: <AdminOrdersPage /> },
+      { path: "orders/:orderId", element: <AdminOrderDetailPage /> },
     ],
   },
 ]);

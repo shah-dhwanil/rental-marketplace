@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import {
   User, Mail, Phone, MapPin, Building2, BadgeCheck,
-  Camera, Edit, LogOut, AlertCircle,
+  Edit, LogOut, AlertCircle, ChevronRight, CreditCard, ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth.store";
@@ -193,6 +193,39 @@ export function ProfilePage() {
                 </Link>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* Customer-only: Addresses & Payment Methods */}
+        {profile.role === "customer" && (
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            <p className="px-5 pt-4 pb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">
+              My Account
+            </p>
+            <Link
+              to="/profile/addresses"
+              className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors border-t border-slate-100 dark:border-slate-800"
+            >
+              <MapPin className="h-4 w-4 text-primary shrink-0" />
+              <span className="flex-1 text-sm font-medium">Delivery Addresses</span>
+              <ChevronRight className="h-4 w-4 text-slate-400" />
+            </Link>
+            <Link
+              to="/profile/payment-methods"
+              className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors border-t border-slate-100 dark:border-slate-800"
+            >
+              <CreditCard className="h-4 w-4 text-primary shrink-0" />
+              <span className="flex-1 text-sm font-medium">Payment Methods</span>
+              <ChevronRight className="h-4 w-4 text-slate-400" />
+            </Link>
+            <Link
+              to="/orders"
+              className="flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors border-t border-slate-100 dark:border-slate-800"
+            >
+              <ShoppingBag className="h-4 w-4 text-primary shrink-0" />
+              <span className="flex-1 text-sm font-medium">My Orders</span>
+              <ChevronRight className="h-4 w-4 text-slate-400" />
+            </Link>
           </div>
         )}
       </div>
