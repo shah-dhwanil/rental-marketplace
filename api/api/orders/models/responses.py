@@ -51,3 +51,4 @@ class OrderResponse(BaseModel):
 
 class CreateOrderResponse(BaseModel):
     order: OrderResponse
+    client_secret: str  # Stripe PaymentIntent client_secret for frontend payment

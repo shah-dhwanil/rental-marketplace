@@ -32,6 +32,7 @@ import { VendorCreatePromoPage } from "./pages/vendor-dashboard/VendorCreateProm
 import { VendorEditPromoPage } from "./pages/vendor-dashboard/VendorEditPromoPage";
 import { CartPage } from "./pages/CartPage";
 import { CheckoutPage } from "./pages/CheckoutPage";
+import { PaymentPage } from "./pages/PaymentPage";
 import { OrderConfirmationPage } from "./pages/OrderConfirmationPage";
 import { CustomerOrdersPage } from "./pages/orders/CustomerOrdersPage";
 import { CustomerOrderDetailPage } from "./pages/orders/CustomerOrderDetailPage";
@@ -99,6 +100,7 @@ const router = createBrowserRouter([
 
   // ── Checkout & Order Confirmation (standalone, no main navbar) ────────────
   { path: "/checkout", element: <CheckoutPage /> },
+  { path: "/payment", element: <PaymentPage /> },
   { path: "/orders/confirmation", element: <OrderConfirmationPage /> },
 
   // ── Login — role selection landing page ───────────────────────────────────

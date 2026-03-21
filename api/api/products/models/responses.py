@@ -47,3 +47,14 @@ class DeviceResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+
+
+class PriceCalculationResponse(BaseModel):
+    product_id: str
+    product_name: str
+    rental_days: int
+    pricing_tier: str  # "daily" | "weekly" | "monthly"
+    rental_amount: Decimal
+    security_deposit: Decimal
+    defect_charge: Decimal
+    breakdown: str  # Human-readable breakdown like "3 weeks × ₹500"

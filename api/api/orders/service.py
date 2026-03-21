@@ -42,14 +42,22 @@ def _rental_days(start: date, end: date) -> int:
 def _calculate_rental_amount(
     price_day: Decimal, price_week: Decimal, price_month: Decimal, days: int
 ) -> Decimal:
-    """Select the most economical pricing tier for the rental duration."""
-    if days >= 30:
-        months = math.ceil(days / 30)
-        return price_month * months
-    if days >= 7:
+    """
+    Calculate rental amount with roundoff logic matching the price calculation endpoint.
+
+    Rules:
+    - <7 days: use daily rate
+    - ≥7 days and <30 days: use weekly rate (round up, e.g., 2 weeks 2 days = 3 weeks)
+    - ≥30 days: use monthly rate (round up, e.g., 1 month 5 days = 2 months)
+    """
+    if days < 7:
+        return price_day * days
+    if days < 30:
         weeks = math.ceil(days / 7)
         return price_week * weeks
-    return price_day * days
+    # days >= 30
+    months = math.ceil(days / 30)
+    return price_month * months
 
 
 def _apply_promo(amount: Decimal, promo_row: dict) -> Decimal:
@@ -184,14 +192,12 @@ class OrderService:
                 "grand_total": grand_total,
             })
 
-            # Create and immediately confirm PaymentIntent using test card (secret-key-only mode)
+            # Create PaymentIntent WITHOUT confirming (frontend will collect payment)
             intent = await asyncio.to_thread(
                 stripe.PaymentIntent.create,
                 amount=int(grand_total * 100),
                 currency="inr",
-                payment_method="pm_card_visa",
                 payment_method_types=["card"],
-                confirm=True,
                 metadata={
                     "order_id": str(order_row["id"]),
                     "customer_id": customer_id,
@@ -206,7 +212,10 @@ class OrderService:
             })
 
             logger.info("order_created", order_id=str(order_row["id"]), customer_id=customer_id)
-            return CreateOrderResponse(order=_row_to_response(order_row))
+            return CreateOrderResponse(
+                order=_row_to_response(order_row),
+                client_secret=intent.client_secret or "",
+            )
         except AppException:
             raise
         except stripe.StripeError as exc:

@@ -128,3 +128,20 @@ export type CreateDeviceForm = {
   properties: string; // JSON string
   is_active: boolean;
 };
+
+// ---------------------------------------------------------------------------
+// Price Calculation
+// ---------------------------------------------------------------------------
+
+export const PriceCalculationSchema = z.object({
+  product_id: z.string(),
+  product_name: z.string(),
+  rental_days: z.number(),
+  pricing_tier: z.enum(["daily", "weekly", "monthly"]),
+  rental_amount: z.union([z.string(), z.number()]).transform((v) => Number(v)),
+  security_deposit: z.union([z.string(), z.number()]).transform((v) => Number(v)),
+  defect_charge: z.union([z.string(), z.number()]).transform((v) => Number(v)),
+  breakdown: z.string(), // e.g., "3 weeks × ₹500"
+});
+
+export type PriceCalculation = z.infer<typeof PriceCalculationSchema>;

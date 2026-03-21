@@ -8,12 +8,18 @@ from fastapi import APIRouter, File, Query, UploadFile, status
 from api.models.pagination import PaginatedResponse
 from api.products.dependencies import ProductServiceDep, VendorDep, VendorOrAdminDep
 from api.products.models.requests import (
+    CalculatePriceRequest,
     CreateDeviceRequest,
     CreateProductRequest,
     UpdateDeviceRequest,
     UpdateProductRequest,
 )
-from api.products.models.responses import DeviceResponse, ProductResponse, ProductSummaryResponse
+from api.products.models.responses import (
+    DeviceResponse,
+    PriceCalculationResponse,
+    ProductResponse,
+    ProductSummaryResponse,
+)
 from api.settings.settings import get_settings
 
 router = APIRouter(tags=["Products & Devices"])
@@ -135,6 +141,23 @@ async def delete_product_image(
 ):
     vendor_id = claims.user_id if claims.role == "vendor" else None
     return await service.delete_product_image(product_id, vendor_id, index)
+
+
+@router.post(
+    "/api/v1/products/{product_id}/calculate-price",
+    response_model=PriceCalculationResponse,
+    summary="Calculate rental price for a product (public)",
+)
+async def calculate_price(product_id: str, body: CalculatePriceRequest, service: ProductServiceDep):
+    """
+    Calculate the rental price for a product based on the rental period.
+
+    Pricing logic with round-off:
+    - <7 days: daily rate
+    - ≥7 days and <30 days: weekly rate (rounded up, e.g., 2 weeks 2 days = 3 weeks)
+    - ≥30 days: monthly rate (rounded up, e.g., 1 month 5 days = 2 months)
+    """
+    return await service.calculate_price(product_id, body)
 
 
 # ---------------------------------------------------------------------------

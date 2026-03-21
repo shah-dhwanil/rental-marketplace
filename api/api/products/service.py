@@ -1,7 +1,9 @@
 """Product and Device service — business logic for the products domain."""
 
 import json
+import math
 from datetime import date
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional
 from uuid import UUID
 
@@ -19,12 +21,18 @@ from api.products.exceptions import (
     ProductOwnershipException,
 )
 from api.products.models.requests import (
+    CalculatePriceRequest,
     CreateDeviceRequest,
     CreateProductRequest,
     UpdateDeviceRequest,
     UpdateProductRequest,
 )
-from api.products.models.responses import DeviceResponse, ProductResponse, ProductSummaryResponse
+from api.products.models.responses import (
+    DeviceResponse,
+    PriceCalculationResponse,
+    ProductResponse,
+    ProductSummaryResponse,
+)
 from api.products.repository import ProductRepository
 
 logger = structlog.get_logger(__name__)
@@ -32,6 +40,47 @@ logger = structlog.get_logger(__name__)
 _ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/webp"}
 _MAX_IMAGE_BYTES = 10 * 1024 * 1024  # 10 MB
 _MAX_IMAGES_PER_PRODUCT = 8
+
+
+def _calculate_rental_days(start: date, end: date) -> int:
+    """Calculate number of rental days (inclusive)."""
+    return (end - start).days + 1
+
+
+def _calculate_rental_amount_with_roundoff(
+    price_day: Decimal, price_week: Decimal, price_month: Decimal, days: int
+) -> tuple[Decimal, str, str]:
+    """
+    Calculate rental amount with roundoff logic.
+
+    Rules:
+    - <7 days: use daily rate
+    - ≥7 days and <30 days: use weekly rate (round up, e.g., 2 weeks 2 days = 3 weeks)
+    - ≥30 days: use monthly rate (round up, e.g., 1 month 5 days = 2 months)
+
+    Returns: (amount, tier, breakdown)
+    - tier: "daily" | "weekly" | "monthly"
+    - breakdown: human-readable explanation like "3 weeks × ₹500"
+    """
+    if days < 7:
+        # Daily rate
+        amount = price_day * days
+        tier = "daily"
+        breakdown = f"{days} day{'s' if days != 1 else ''} × ₹{price_day:,.0f}"
+    elif days < 30:
+        # Weekly rate with roundoff
+        weeks = math.ceil(days / 7)
+        amount = price_week * weeks
+        tier = "weekly"
+        breakdown = f"{weeks} week{'s' if weeks != 1 else ''} × ₹{price_week:,.0f}"
+    else:
+        # Monthly rate with roundoff
+        months = math.ceil(days / 30)
+        amount = price_month * months
+        tier = "monthly"
+        breakdown = f"{months} month{'s' if months != 1 else ''} × ₹{price_month:,.0f}"
+
+    return amount.quantize(Decimal("0.01"), rounding=ROUND_HALF_UP), tier, breakdown
 
 
 def _row_to_product(row: dict) -> ProductResponse:
@@ -442,4 +491,48 @@ class ProductService:
         except AppException:
             raise
         except Exception as exc:
+            raise UnkownAppException() from exc
+
+    # -----------------------------------------------------------------------
+    # Price Calculation
+    # -----------------------------------------------------------------------
+
+    async def calculate_price(
+        self, product_id: str, data: CalculatePriceRequest
+    ) -> PriceCalculationResponse:
+        """Calculate rental price for a product based on rental period with roundoff logic."""
+        try:
+            product = await self._repo.find_by_id(UUID(product_id))
+            if not product or not product.get("is_active") or product.get("is_deleted"):
+                raise ProductNotFoundException(product_id)
+
+            days = _calculate_rental_days(data.start_date, data.end_date)
+            if days <= 0:
+                raise AppException(
+                    ErrorTypes.InputValidationError,
+                    "end_date must be after start_date",
+                    field="end_date",
+                )
+
+            rental_amount, tier, breakdown = _calculate_rental_amount_with_roundoff(
+                Decimal(str(product["price_day"])),
+                Decimal(str(product["price_week"])),
+                Decimal(str(product["price_month"])),
+                days,
+            )
+
+            return PriceCalculationResponse(
+                product_id=str(product["id"]),
+                product_name=product["name"],
+                rental_days=days,
+                pricing_tier=tier,
+                rental_amount=rental_amount,
+                security_deposit=Decimal(str(product["security_deposit"])),
+                defect_charge=Decimal(str(product["defect_charge"])),
+                breakdown=breakdown,
+            )
+        except AppException:
+            raise
+        except Exception as exc:
+            logger.error("calculate_price_failed", exc_info=True)
             raise UnkownAppException() from exc

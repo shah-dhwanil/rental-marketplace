@@ -73,6 +73,7 @@ export type PaginatedOrders = z.infer<typeof PaginatedOrdersSchema>;
 
 export const CreateOrderResponseSchema = z.object({
   order: OrderSchema,
+  client_secret: z.string(),
 });
 
 export type CreateOrderResponse = z.infer<typeof CreateOrderResponseSchema>;

@@ -1,6 +1,6 @@
 import { useLoaderData, Link } from "react-router";
 import { useState, useEffect } from "react";
-import { Heart, AlertCircle, ChevronDown, ChevronUp, Phone, MapPin, User, X } from "lucide-react";
+import { Heart, AlertCircle, ChevronDown, ChevronUp, Phone, MapPin, User, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/carousel";
 import type { productDetailLoader } from "@/loaders";
 import { useWishlistStore, useCartStore, useRentalDatesStore } from "@/stores";
-import { getVendorPublicProfile, type VendorPublicProfile } from "@/services/catalog.service";
+import { getVendorPublicProfile, type VendorPublicProfile, calculatePrice, type PriceCalculation } from "@/services/catalog.service";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -26,56 +26,6 @@ function formatINR(amount: number): string {
     currency: "INR",
     maximumFractionDigits: 0,
   }).format(amount);
-}
-
-/** Choose the optimal pricing plan and return the total cost. */
-function calculateBestPrice(
-  days: number,
-  priceDay: number,
-  priceWeek: number,
-  priceMonth: number,
-): { total: number; label: string; breakdown: string } {
-  if (days <= 0) return { total: 0, label: "", breakdown: "" };
-
-  const rawDaily = priceDay * days;
-
-  // Monthly option: full months + remaining days
-  const fullMonths = Math.floor(days / 30);
-  const remAfterMonths = days % 30;
-  const monthlyTotal = fullMonths * priceMonth + remAfterMonths * priceDay;
-
-  // Weekly option: full weeks + remaining days
-  const fullWeeks = Math.floor(days / 7);
-  const remAfterWeeks = days % 7;
-  const weeklyTotal = fullWeeks * priceWeek + remAfterWeeks * priceDay;
-
-  if (days >= 30 && priceMonth > 0 && monthlyTotal < rawDaily) {
-    return {
-      total: monthlyTotal,
-      label: "Monthly",
-      breakdown:
-        fullMonths > 0
-          ? `${fullMonths}mo × ${formatINR(priceMonth)}${remAfterMonths > 0 ? ` + ${remAfterMonths}d × ${formatINR(priceDay)}` : ""}`
-          : `${days}d × ${formatINR(priceDay)}`,
-    };
-  }
-
-  if (days >= 7 && priceWeek > 0 && weeklyTotal < rawDaily) {
-    return {
-      total: weeklyTotal,
-      label: "Weekly",
-      breakdown:
-        fullWeeks > 0
-          ? `${fullWeeks}wk × ${formatINR(priceWeek)}${remAfterWeeks > 0 ? ` + ${remAfterWeeks}d × ${formatINR(priceDay)}` : ""}`
-          : `${days}d × ${formatINR(priceDay)}`,
-    };
-  }
-
-  return {
-    total: rawDaily,
-    label: "Daily",
-    breakdown: `${days}d × ${formatINR(priceDay)}`,
-  };
 }
 
 // ---------------------------------------------------------------------------
@@ -95,6 +45,9 @@ export function ProductDetailPage() {
   const [vendor, setVendor] = useState<VendorPublicProfile | null>(null);
   const [vendorLoading, setVendorLoading] = useState(true);
 
+  const [priceCalc, setPriceCalc] = useState<PriceCalculation | null>(null);
+  const [priceLoading, setPriceLoading] = useState(false);
+
   // Derive a default date range if store is empty
   const today = new Date().toISOString().split("T")[0];
   const oneWeekLater = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
@@ -111,16 +64,23 @@ export function ProductDetailPage() {
       .finally(() => setVendorLoading(false));
   }, [product.vendor_id]);
 
-  // Pricing calculation
+  // Fetch price calculation when dates change
+  useEffect(() => {
+    if (!product.id || !effectiveStart || !effectiveEnd) return;
+    setPriceLoading(true);
+    calculatePrice(product.id, effectiveStart, effectiveEnd)
+      .then(setPriceCalc)
+      .catch(() => setPriceCalc(null))
+      .finally(() => setPriceLoading(false));
+  }, [product.id, effectiveStart, effectiveEnd]);
+
+  // Pricing from API or fallback to daily rate
   const days = getDays() || 7;
-  const { total: rentalCost, label: pricingLabel, breakdown: pricingBreakdown } = calculateBestPrice(
-    days,
-    product.price_day ?? 0,
-    product.price_week ?? 0,
-    product.price_month ?? 0,
-  );
+  const rentalCost = priceCalc?.rental_amount ?? (product.price_day ?? 0) * days;
   const deposit = product.security_deposit ?? 0;
   const totalCost = rentalCost + deposit;
+  const pricingLabel = priceCalc?.pricing_tier ? priceCalc.pricing_tier.charAt(0).toUpperCase() + priceCalc.pricing_tier.slice(1) : "Daily";
+  const pricingBreakdown = priceCalc?.breakdown ?? `${days}d × ₹${product.price_day ?? 0}`;
 
   const handleAddToCart = () => {
     addToCart({
@@ -129,7 +89,7 @@ export function ProductDetailPage() {
       productImage: product.image_urls?.[0] || "",
       startDate: effectiveStart,
       endDate: effectiveEnd,
-      dailyRate: product.price_day ?? 0,
+      dailyRate: rentalCost / days, // Use calculated rate per day
       totalDays: days,
       deposit,
       deliveryMethod: "pickup",
@@ -386,32 +346,45 @@ export function ProductDetailPage() {
 
                 {/* Cost Breakdown */}
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">
-                      Rental ({pricingLabel} plan) — {pricingBreakdown}
-                    </span>
-                    <span className="font-semibold text-slate-900 dark:text-slate-100">{formatINR(rentalCost)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-slate-600 dark:text-slate-400">Security Deposit</span>
-                    <span className="font-semibold text-slate-900 dark:text-slate-100">{formatINR(deposit)}</span>
-                  </div>
-                  {(product.defect_charge ?? 0) > 0 && (
-                    <div className="flex justify-between text-xs text-slate-400">
-                      <span>Damage charge (if any)</span>
-                      <span>{formatINR(product.defect_charge ?? 0)}</span>
+                  {priceLoading ? (
+                    <div className="flex items-center justify-center py-4 text-muted-foreground">
+                      <Loader2 className="size-4 animate-spin mr-2" />
+                      Calculating price...
                     </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600 dark:text-slate-400">
+                          Rental ({pricingLabel} plan) — {pricingBreakdown}
+                        </span>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100">{formatINR(rentalCost)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-slate-600 dark:text-slate-400">Security Deposit</span>
+                        <span className="font-semibold text-slate-900 dark:text-slate-100">{formatINR(deposit)}</span>
+                      </div>
+                      {(product.defect_charge ?? 0) > 0 && (
+                        <div className="flex justify-between text-xs text-slate-400">
+                          <span>Damage charge (if any)</span>
+                          <span>{formatINR(product.defect_charge ?? 0)}</span>
+                        </div>
+                      )}
+                      <div className="border-t border-slate-200 dark:border-slate-700 pt-2 flex justify-between font-bold text-base">
+                        <span>Total</span>
+                        <span className="text-primary dark:text-purple-400">{formatINR(totalCost)}</span>
+                      </div>
+                    </>
                   )}
-                  <div className="border-t border-slate-200 dark:border-slate-700 pt-2 flex justify-between font-bold text-base">
-                    <span>Total</span>
-                    <span className="text-primary dark:text-purple-400">{formatINR(totalCost)}</span>
-                  </div>
                 </div>
 
                 {/* Action Buttons */}
                 <div className="space-y-2 pt-1">
-                  <Button onClick={handleAddToCart} className="w-full bg-primary hover:bg-purple-700 text-white py-3 font-bold text-base">
-                    Order / Rent Now
+                  <Button
+                    onClick={handleAddToCart}
+                    className="w-full bg-primary hover:bg-purple-700 text-white py-3 font-bold text-base"
+                    disabled={priceLoading}
+                  >
+                    {priceLoading ? "Calculating..." : "Order / Rent Now"}
                   </Button>
                   <Button
                     onClick={() => toggleWishlist(product.id)}

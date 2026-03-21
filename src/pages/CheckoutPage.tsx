@@ -7,6 +7,7 @@ import { useCartStore } from "@/stores/cart.store";
 import { useAuthStore } from "@/stores/auth.store";
 import { createOrder, confirmPayment } from "@/services/order.service";
 import { validatePromo } from "@/services/promo.service";
+import { calculatePrice } from "@/services/catalog.service";
 import { listAddresses, type Address } from "@/services/address.service";
 import type { PromoValidationResult } from "@/schemas/promo.schema";
 import { ApiError } from "@/lib/api";
@@ -29,12 +30,15 @@ function addDays(dateStr: string, days: number): string {
 
 export function CheckoutPage() {
   const navigate = useNavigate();
-  const { items, removeFromCart } = useCartStore();
+  const { items } = useCartStore();
   const { accessToken, isAuthenticated } = useAuthStore();
 
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
   const [addressLoading, setAddressLoading] = useState(false);
+
+  const [priceCalc, setPriceCalc] = useState<{ rental: number; deposit: number; days: number } | null>(null);
+  const [priceLoading, setPriceLoading] = useState(false);
 
   const [promoCode, setPromoCode] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
@@ -62,17 +66,35 @@ export function CheckoutPage() {
   }, [accessToken]);
 
   const item = items[0];
+
+  // Fetch price from API when item changes
+  useEffect(() => {
+    if (!item) return;
+    setPriceLoading(true);
+    calculatePrice(item.productId, item.startDate, item.endDate)
+      .then((calc) => {
+        setPriceCalc({
+          rental: calc.rental_amount,
+          deposit: calc.security_deposit,
+          days: calc.rental_days,
+        });
+      })
+      .catch(() => setPriceCalc(null))
+      .finally(() => setPriceLoading(false));
+  }, [item?.productId, item?.startDate, item?.endDate]);
+
   if (!item) return null;
 
   const deliveryType = item.deliveryMethod === "pickup" ? "pickup" : "home_delivery";
   const deliveryDate = item.startDate;
   const returnDate = addDays(item.endDate, 1);
 
+  const baseRental = priceCalc?.rental ?? item.dailyRate * item.totalDays;
+  const deposit = priceCalc?.deposit ?? item.deposit;
   const discount = promoResult?.discount_amount ?? 0;
-  const baseRental = item.dailyRate * item.totalDays;
   const netRental = baseRental - discount;
   const estimatedGst = netRental * 0.18;
-  const estimatedTotal = netRental + estimatedGst + item.deposit;
+  const estimatedTotal = netRental + estimatedGst + deposit;
 
   async function handleApplyPromo() {
     const code = promoCode.trim().toUpperCase();
@@ -106,12 +128,14 @@ export function CheckoutPage() {
         promo_code: promoResult ? promoCode.trim().toUpperCase() : undefined,
       });
 
-      // Backend auto-confirms the payment with the test card.
-      // We just need to call the confirm endpoint so the order moves to "confirmed".
-      await confirmPayment(accessToken, res.order.id);
+      // Validate response has required fields
+      if (!res.client_secret) {
+        throw new Error("Payment initialization failed. Please try again.");
+      }
 
-      removeFromCart(item.productId);
-      navigate(`/orders/confirmation?order_id=${res.order.id}`);
+      // Navigate to payment page
+      // Item will be removed from cart after successful payment
+      navigate(`/payment?order_id=${res.order.id}&client_secret=${res.client_secret}&product_id=${item.productId}`);
     } catch (err) {
       setPlaceError(err instanceof ApiError ? err.message : "Failed to place order. Please try again.");
     } finally {
@@ -147,7 +171,7 @@ export function CheckoutPage() {
           <div className="space-y-1 min-w-0">
             <p className="font-medium text-sm">{item.productName}</p>
             <p className="text-xs text-muted-foreground">
-              {formatDate(item.startDate)} — {formatDate(item.endDate)} ({item.totalDays} day{item.totalDays !== 1 ? "s" : ""})
+              {formatDate(item.startDate)} — {formatDate(item.endDate)} ({priceCalc?.days ?? item.totalDays} day{(priceCalc?.days ?? item.totalDays) !== 1 ? "s" : ""})
             </p>
             <p className="text-xs text-muted-foreground">
               Delivery: {deliveryType === "pickup" ? "Self Pickup" : "Home Delivery"} &nbsp;|&nbsp;
@@ -231,29 +255,38 @@ export function CheckoutPage() {
       {/* Estimated pricing */}
       <div className="rounded-xl border border-border bg-background p-4 space-y-2 text-sm">
         <h2 className="font-semibold mb-2">Order Summary</h2>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Rental</span>
-          <span>{formatCurrency(baseRental)}</span>
-        </div>
-        {discount > 0 && (
-          <div className="flex justify-between text-green-600">
-            <span>Promo Discount</span>
-            <span>-{formatCurrency(discount)}</span>
+        {priceLoading ? (
+          <div className="flex items-center justify-center py-4 text-muted-foreground">
+            <Loader2 className="size-4 animate-spin mr-2" />
+            Calculating price...
           </div>
+        ) : (
+          <>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Rental</span>
+              <span>{formatCurrency(baseRental)}</span>
+            </div>
+            {discount > 0 && (
+              <div className="flex justify-between text-green-600">
+                <span>Promo Discount</span>
+                <span>-{formatCurrency(discount)}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-muted-foreground">
+              <span>GST (18%)</span>
+              <span>~{formatCurrency(estimatedGst)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Security Deposit</span>
+              <span>{formatCurrency(deposit)}</span>
+            </div>
+            <div className="border-t pt-2 flex justify-between font-semibold text-base">
+              <span>Grand Total (est.)</span>
+              <span>{formatCurrency(estimatedTotal)}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">Exact amount calculated at order placement.</p>
+          </>
         )}
-        <div className="flex justify-between text-muted-foreground">
-          <span>GST (18%)</span>
-          <span>~{formatCurrency(estimatedGst)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-muted-foreground">Security Deposit</span>
-          <span>{formatCurrency(item.deposit)}</span>
-        </div>
-        <div className="border-t pt-2 flex justify-between font-semibold text-base">
-          <span>Grand Total (est.)</span>
-          <span>{formatCurrency(estimatedTotal)}</span>
-        </div>
-        <p className="text-xs text-muted-foreground">Exact amount calculated at order placement.</p>
       </div>
 
       {/* Place order */}
@@ -261,7 +294,7 @@ export function CheckoutPage() {
         className="w-full"
         size="lg"
         onClick={handlePlaceOrder}
-        disabled={placing || !selectedAddressId || addressLoading}
+        disabled={placing || !selectedAddressId || addressLoading || priceLoading}
       >
         {placing ? (
           <><Loader2 className="size-4 animate-spin mr-2" />Placing Order…</>

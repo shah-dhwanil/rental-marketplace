@@ -1,5 +1,6 @@
 """Request models for products and devices."""
 
+from datetime import date
 from typing import Any, Optional
 
 from pydantic import BaseModel, field_validator
@@ -106,4 +107,16 @@ class UpdateDeviceRequest(BaseModel):
     def valid_condition(cls, v: Optional[str]) -> Optional[str]:
         if v is not None and v not in ("new", "good", "fair", "poor"):
             raise ValueError("condition must be one of: new, good, fair, poor")
+        return v
+
+
+class CalculatePriceRequest(BaseModel):
+    start_date: date
+    end_date: date
+
+    @field_validator("end_date")
+    @classmethod
+    def end_after_start(cls, v: date, info) -> date:
+        if "start_date" in info.data and v < info.data["start_date"]:
+            raise ValueError("end_date must be after start_date")
         return v

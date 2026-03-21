@@ -5,6 +5,7 @@ import {
   PaginatedCategoriesSchema,
   PaginatedProductsSchema,
   PaginatedDevicesSchema,
+  PriceCalculationSchema,
   ProductSchema,
   DeviceSchema,
   type Category,
@@ -13,6 +14,7 @@ import {
   type PaginatedCategories,
   type PaginatedProducts,
   type PaginatedDevices,
+  type PriceCalculation,
   type Product,
 } from "@/schemas/catalog.schema";
 
@@ -204,6 +206,21 @@ export async function deleteProductImage(
     token,
   );
   return ProductSchema.parse(data);
+}
+
+export async function calculatePrice(
+  productId: string,
+  startDate: string,
+  endDate: string,
+): Promise<PriceCalculation> {
+  const data = await apiFetch<unknown>(
+    `/products/${productId}/calculate-price`,
+    {
+      method: "POST",
+      body: JSON.stringify({ start_date: startDate, end_date: endDate }),
+    },
+  );
+  return PriceCalculationSchema.parse(data);
 }
 
 // ---------------------------------------------------------------------------

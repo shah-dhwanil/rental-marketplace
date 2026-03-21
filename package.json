@@ -14,7 +14,7 @@
     "@hugeicons/core-free-icons": "^3.1.1",
     "@hugeicons/react": "^1.1.4",
     "@stripe/react-stripe-js": "^5.6.1",
-    "@stripe/stripe-js": "^8.9.0",
+    "@stripe/stripe-js": "^8.11.0",
     "bun-plugin-tailwind": "^0.1.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
