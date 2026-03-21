@@ -27,7 +27,6 @@ export function PaymentPage() {
 
   const orderId = params.get("order_id");
   const clientSecret = params.get("client_secret");
-  const productId = params.get("product_id");
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
@@ -159,7 +158,7 @@ export function PaymentPage() {
               },
             }}
           >
-            <StripePaymentForm orderId={orderId!} amount={order.grand_total} productId={productId ?? undefined} />
+            <StripePaymentForm orderId={orderId!} amount={order.grand_total} />
           </Elements>
         </CardContent>
       </Card>

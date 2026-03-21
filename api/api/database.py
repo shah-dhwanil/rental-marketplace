@@ -14,6 +14,7 @@ import asyncpg
 import structlog
 import shapely.geometry
 import shapely.wkb
+from pgvector.asyncpg import register_vector
 from api.settings.database import DatabaseConfig
 
 logger = structlog.get_logger(__name__)
@@ -47,6 +48,10 @@ class DatabasePool:
     def decode_geometry(wkb):
         return shapely.wkb.loads(wkb)
     async def init_connection(self, connection: asyncpg.Connection):
+        # Register pgvector type
+        await register_vector(connection,"rental")
+
+        # Register geometry types
         await connection.set_type_codec(
             'geometry',  # also works for 'geography'
             encoder=self.encode_geometry,
@@ -54,6 +59,8 @@ class DatabasePool:
             format='binary',
             schema='rental',
         )
+
+        # Register JSON types
         await connection.set_type_codec(
             "json",
             encoder=dumps,

@@ -4,7 +4,6 @@ import {
   Search,
   MapPin,
   Menu,
-  ShoppingCart,
   User,
   ChevronDown,
   Store,
@@ -15,7 +14,7 @@ import {
   Sun
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useCartStore, useAuthStore, useSearchStore, useLocationStore, useThemeStore, useRentalDatesStore } from "@/stores";
+import { useAuthStore, useSearchStore, useLocationStore, useThemeStore, useRentalDatesStore } from "@/stores";
 import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
@@ -53,7 +52,6 @@ export function Navbar() {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Zustand stores
-  const cartItemCount = useCartStore(state => state.getItemCount());
   const { user, isAuthenticated, logout } = useAuthStore();
   const { query, setQuery, addToRecentSearches } = useSearchStore();
   const { location, lat, lng, setLocation, setCoords } = useLocationStore();
@@ -335,20 +333,6 @@ export function Navbar() {
               </PopoverContent>
             </Popover>
 
-            {/* Cart */}
-            <Link to="/cart">
-              <Button variant="ghost" className="relative hover:bg-purple-50 dark:hover:bg-slate-800 hover:text-primary dark:hover:text-purple-400 dark:text-slate-300 px-2 h-10 flex items-center gap-1">
-                <div className="relative pt-1">
-                  <ShoppingCart className="h-6 w-6" />
-                  {cartItemCount > 0 && (
-                    <span className="absolute top-0 -right-1.5 bg-amber-500 dark:bg-amber-600 text-white text-[10px] font-bold h-4 w-4 flex items-center justify-center rounded-full shadow-sm">
-                      {cartItemCount}
-                    </span>
-                  )}
-                </div>
-                <span className="hidden xl:block font-bold mt-2">Cart</span>
-              </Button>
-            </Link>
             {/* Login / Profile */}
             <DropdownMenu>
               <DropdownMenuTrigger className="hidden md:flex flex-col items-start h-10 py-0 px-2 hover:bg-purple-50 dark:hover:bg-slate-800 gap-0 group rounded-md whitespace-nowrap text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:text-accent-foreground">

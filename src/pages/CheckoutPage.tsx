@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router";
+import { useNavigate, useSearchParams, Link } from "react-router";
 import { ArrowLeft, MapPin, Package, ChevronRight, Loader2, AlertCircle, Tag, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useCartStore } from "@/stores/cart.store";
 import { useAuthStore } from "@/stores/auth.store";
-import { createOrder, confirmPayment } from "@/services/order.service";
+import { createOrder } from "@/services/order.service";
 import { validatePromo } from "@/services/promo.service";
-import { calculatePrice } from "@/services/catalog.service";
+import { calculatePrice, getProduct } from "@/services/catalog.service";
 import { listAddresses, type Address } from "@/services/address.service";
 import type { PromoValidationResult } from "@/schemas/promo.schema";
+import type { Product } from "@/schemas/catalog.schema";
 import { ApiError } from "@/lib/api";
 
 function formatCurrency(n: number) {
@@ -28,10 +28,25 @@ function addDays(dateStr: string, days: number): string {
   return d.toISOString().split("T")[0];
 }
 
+function calculateDays(start: string, end: string): number {
+  const startDate = new Date(start + "T00:00:00");
+  const endDate = new Date(end + "T00:00:00");
+  return Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+}
+
 export function CheckoutPage() {
   const navigate = useNavigate();
-  const { items } = useCartStore();
+  const [params] = useSearchParams();
   const { accessToken, isAuthenticated } = useAuthStore();
+
+  // Get rental details from URL params
+  const productId = params.get("product_id");
+  const startDate = params.get("start_date");
+  const endDate = params.get("end_date");
+  const deliveryMethod = params.get("delivery_method") || "pickup";
+
+  const [product, setProduct] = useState<Product | null>(null);
+  const [productLoading, setProductLoading] = useState(true);
 
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("");
@@ -48,11 +63,32 @@ export function CheckoutPage() {
   const [placing, setPlacing] = useState(false);
   const [placeError, setPlaceError] = useState<string | null>(null);
 
+  // Redirect if not authenticated or missing params
   useEffect(() => {
-    if (!isAuthenticated) { navigate("/login/customer"); return; }
-    if (items.length === 0) { navigate("/cart"); return; }
-  }, [isAuthenticated, items.length, navigate]);
+    if (!isAuthenticated) {
+      navigate("/login/customer");
+      return;
+    }
+    if (!productId || !startDate || !endDate) {
+      navigate("/");
+      return;
+    }
+  }, [isAuthenticated, productId, startDate, endDate, navigate]);
 
+  // Fetch product details
+  useEffect(() => {
+    if (!productId) return;
+    setProductLoading(true);
+    getProduct(productId)
+      .then(setProduct)
+      .catch(() => {
+        setProduct(null);
+        navigate("/");
+      })
+      .finally(() => setProductLoading(false));
+  }, [productId, navigate]);
+
+  // Fetch addresses
   useEffect(() => {
     if (!accessToken) return;
     setAddressLoading(true);
@@ -65,13 +101,11 @@ export function CheckoutPage() {
       .finally(() => setAddressLoading(false));
   }, [accessToken]);
 
-  const item = items[0];
-
-  // Fetch price from API when item changes
+  // Fetch price calculation
   useEffect(() => {
-    if (!item) return;
+    if (!productId || !startDate || !endDate) return;
     setPriceLoading(true);
-    calculatePrice(item.productId, item.startDate, item.endDate)
+    calculatePrice(productId, startDate, endDate)
       .then((calc) => {
         setPriceCalc({
           rental: calc.rental_amount,
@@ -81,16 +115,23 @@ export function CheckoutPage() {
       })
       .catch(() => setPriceCalc(null))
       .finally(() => setPriceLoading(false));
-  }, [item?.productId, item?.startDate, item?.endDate]);
+  }, [productId, startDate, endDate]);
 
-  if (!item) return null;
+  if (productLoading || !product || !startDate || !endDate) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
-  const deliveryType = item.deliveryMethod === "pickup" ? "pickup" : "home_delivery";
-  const deliveryDate = item.startDate;
-  const returnDate = addDays(item.endDate, 1);
+  const deliveryType = deliveryMethod === "pickup" ? "pickup" : "home_delivery";
+  const deliveryDate = startDate;
+  const days = priceCalc?.days ?? calculateDays(startDate, endDate);
+  const returnDate = addDays(endDate, 1);
 
-  const baseRental = priceCalc?.rental ?? item.dailyRate * item.totalDays;
-  const deposit = priceCalc?.deposit ?? item.deposit;
+  const baseRental = priceCalc?.rental ?? (product.price_day ?? 0) * days;
+  const deposit = priceCalc?.deposit ?? (product.security_deposit ?? 0);
   const discount = promoResult?.discount_amount ?? 0;
   const netRental = baseRental - discount;
   const estimatedGst = netRental * 0.18;
@@ -103,7 +144,7 @@ export function CheckoutPage() {
     setPromoError(null);
     setPromoResult(null);
     try {
-      const result = await validatePromo(code, item.productId, baseRental);
+      const result = await validatePromo(code, productId!, baseRental);
       setPromoResult(result);
     } catch (err) {
       setPromoError(err instanceof ApiError ? err.message : "Failed to apply promo code.");
@@ -113,15 +154,15 @@ export function CheckoutPage() {
   }
 
   async function handlePlaceOrder() {
-    if (!accessToken || !selectedAddressId) return;
+    if (!accessToken || !selectedAddressId || !productId || !startDate || !endDate) return;
     setPlacing(true);
     setPlaceError(null);
     try {
       const res = await createOrder(accessToken, {
-        product_id: item.productId,
+        product_id: productId,
         address_id: selectedAddressId,
-        start_date: item.startDate,
-        end_date: item.endDate,
+        start_date: startDate,
+        end_date: endDate,
         delivery_date: deliveryDate,
         return_date: returnDate,
         delivery_type: deliveryType,
@@ -134,8 +175,7 @@ export function CheckoutPage() {
       }
 
       // Navigate to payment page
-      // Item will be removed from cart after successful payment
-      navigate(`/payment?order_id=${res.order.id}&client_secret=${res.client_secret}&product_id=${item.productId}`);
+      navigate(`/payment?order_id=${res.order.id}&client_secret=${res.client_secret}`);
     } catch (err) {
       setPlaceError(err instanceof ApiError ? err.message : "Failed to place order. Please try again.");
     } finally {
@@ -146,7 +186,7 @@ export function CheckoutPage() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate("/cart")} className="p-2 rounded-lg hover:bg-muted">
+        <button onClick={() => navigate(`/product/${productId}`)} className="p-2 rounded-lg hover:bg-muted">
           <ArrowLeft className="size-4" />
         </button>
         <h1 className="text-xl font-bold">Checkout</h1>
@@ -165,13 +205,13 @@ export function CheckoutPage() {
           <Package className="size-4 text-primary" /> Rental Item
         </h2>
         <div className="flex gap-3">
-          {item.productImage && (
-            <img src={item.productImage} alt={item.productName} className="w-16 h-16 rounded-lg object-cover shrink-0" />
+          {product.image_urls?.[0] && (
+            <img src={product.image_urls[0]} alt={product.name} className="w-16 h-16 rounded-lg object-cover shrink-0" />
           )}
           <div className="space-y-1 min-w-0">
-            <p className="font-medium text-sm">{item.productName}</p>
+            <p className="font-medium text-sm">{product.name}</p>
             <p className="text-xs text-muted-foreground">
-              {formatDate(item.startDate)} — {formatDate(item.endDate)} ({priceCalc?.days ?? item.totalDays} day{(priceCalc?.days ?? item.totalDays) !== 1 ? "s" : ""})
+              {formatDate(startDate)} — {formatDate(endDate)} ({days} day{days !== 1 ? "s" : ""})
             </p>
             <p className="text-xs text-muted-foreground">
               Delivery: {deliveryType === "pickup" ? "Self Pickup" : "Home Delivery"} &nbsp;|&nbsp;
@@ -302,12 +342,6 @@ export function CheckoutPage() {
           <>Place Order <ChevronRight className="size-4 ml-1" /></>
         )}
       </Button>
-
-      {items.length > 1 && (
-        <p className="text-xs text-center text-muted-foreground">
-          Only the first item will be processed. You can checkout remaining items separately.
-        </p>
-      )}
     </div>
   );
 }

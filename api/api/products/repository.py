@@ -36,8 +36,8 @@ class ProductRepository:
             """
             INSERT INTO products
                 (name, description, properties, category_id, vendor_id,
-                 price_day, price_week, price_month, security_deposit, defect_charge, is_active)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                 price_day, price_week, price_month, security_deposit, defect_charge, is_active, embedding)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             RETURNING *
             """,
             data["name"],
@@ -51,6 +51,7 @@ class ProductRepository:
             data.get("security_deposit", 0),
             data.get("defect_charge", 0),
             data.get("is_active", True),
+            data.get("embedding"),
         )
         return _row_to_dict(row)
 
@@ -78,23 +79,26 @@ class ProductRepository:
         category_id: Optional[UUID] = None,
         is_active: Optional[bool] = None,
         q: Optional[str] = None,
+        query_embedding: Optional[list[float]] = None,
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
         lat: Optional[float] = None,
         lng: Optional[float] = None,
         radius_km: Optional[float] = None,
+        fts_weight: float = 0.4,
+        vector_weight: float = 0.6,
         *,
         conn: Optional[asyncpg.Connection] = None,
     ) -> tuple[list[dict], int]:
         if conn is None:
             async with self._db.acquire() as _conn:
                 return await self._list_products(
-                    _conn, page, page_size, vendor_id, category_id, is_active, q,
-                    start_date, end_date, lat, lng, radius_km,
+                    _conn, page, page_size, vendor_id, category_id, is_active, q, query_embedding,
+                    start_date, end_date, lat, lng, radius_km, fts_weight, vector_weight,
                 )
         return await self._list_products(
-            conn, page, page_size, vendor_id, category_id, is_active, q,
-            start_date, end_date, lat, lng, radius_km,
+            conn, page, page_size, vendor_id, category_id, is_active, q, query_embedding,
+            start_date, end_date, lat, lng, radius_km, fts_weight, vector_weight,
         )
 
     async def _list_products(
@@ -106,15 +110,21 @@ class ProductRepository:
         category_id: Optional[UUID],
         is_active: Optional[bool],
         q: Optional[str],
+        query_embedding: Optional[list[float]],
         start_date: Optional[date] = None,
         end_date: Optional[date] = None,
         lat: Optional[float] = None,
         lng: Optional[float] = None,
         radius_km: Optional[float] = None,
+        fts_weight: float = 0.4,
+        vector_weight: float = 0.6,
     ) -> tuple[list[dict], int]:
         conditions = ["p.is_deleted = FALSE"]
         params: list = []
         idx = 1
+
+        # Determine if we're using hybrid search
+        use_hybrid_search = q and query_embedding
 
         if vendor_id is not None:
             conditions.append(f"p.vendor_id = ${idx}")
@@ -128,7 +138,26 @@ class ProductRepository:
             conditions.append(f"p.is_active = ${idx}")
             params.append(is_active)
             idx += 1
-        if q:
+
+        # Build search condition and ordering
+        order_clause = "p.created_at DESC"
+
+        if use_hybrid_search:
+            # Hybrid search: combine FTS and vector similarity
+            # ts_rank returns a score, cosine distance returns 0-2 (we convert to similarity: 1 - distance)
+            # Normalize both scores to 0-1 range and apply weights
+
+            # Add full-text search condition (optional - we can include all and rank by score)
+            # conditions.append(f"p.search_vector @@ plainto_tsquery('english', ${idx})")
+            # idx += 1
+
+            # We'll compute hybrid score in SELECT and order by it
+            # Note: vector cosine distance in pgvector returns 0 (most similar) to 2 (least similar)
+            # We convert to similarity: 1 - (distance / 2) to get 0-1 range
+            pass  # Will be handled in SELECT
+
+        elif q:
+            # Fallback to simple ILIKE if no embedding provided
             conditions.append(f"p.name ILIKE ${idx}")
             params.append(f"%{q}%")
             idx += 1
@@ -174,15 +203,52 @@ class ProductRepository:
             idx += 3
 
         where = " AND ".join(conditions)
+
+        # Count total matching products
         count_row = await conn.fetchrow(f"SELECT COUNT(*) FROM products p WHERE {where}", *params)
         total = count_row[0]
         offset = (page - 1) * page_size
-        rows = await conn.fetch(
-            f"SELECT p.* FROM products p WHERE {where} ORDER BY p.created_at DESC LIMIT ${idx} OFFSET ${idx + 1}",
-            *params,
-            page_size,
-            offset,
-        )
+
+        # Build SELECT with hybrid scoring if applicable
+        if use_hybrid_search:
+            # Hybrid search query with weighted scoring
+            query_param_idx = idx
+            embedding_param_idx = idx + 1
+
+            # Full-text search score with enhanced category weighting
+            # Use ts_rank_cd with category-aware normalization
+            # The search_vector now contains: A=category, B=name, C=description
+            # Using normalization flag 32 for document length + unique word count normalization
+            fts_score = f"ts_rank_cd(p.search_vector, plainto_tsquery('english', ${query_param_idx}), 32)"
+
+            # Vector similarity score (convert cosine distance to similarity: 1 - distance/2)
+            # Cosine distance in pgvector: 0 = identical, 2 = opposite
+            vector_score = f"GREATEST(0, 1 - (p.embedding <=> ${embedding_param_idx}::vector) / 2.0)"
+
+            # Combined hybrid score
+            hybrid_score = f"({fts_weight} * {fts_score} + {vector_weight} * {vector_score})"
+
+            select_query = f"""
+                SELECT p.*,
+                       {hybrid_score} as relevance_score
+                FROM products p
+                WHERE {where}
+                ORDER BY relevance_score DESC, p.created_at DESC
+                LIMIT ${embedding_param_idx + 1} OFFSET ${embedding_param_idx + 2}
+            """
+
+            params.extend([q, query_embedding, page_size, offset])
+            rows = await conn.fetch(select_query, *params)
+
+        else:
+            # No hybrid search - standard query
+            rows = await conn.fetch(
+                f"SELECT p.* FROM products p WHERE {where} ORDER BY {order_clause} LIMIT ${idx} OFFSET ${idx + 1}",
+                *params,
+                page_size,
+                offset,
+            )
+
         return [_row_to_dict(r) for r in rows], total
 
     # -----------------------------------------------------------------------

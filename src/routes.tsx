@@ -30,7 +30,6 @@ import { VendorEditDevicePage } from "./pages/vendor-dashboard/VendorEditDeviceP
 import { VendorPromoCodesPage } from "./pages/vendor-dashboard/VendorPromoCodesPage";
 import { VendorCreatePromoPage } from "./pages/vendor-dashboard/VendorCreatePromoPage";
 import { VendorEditPromoPage } from "./pages/vendor-dashboard/VendorEditPromoPage";
-import { CartPage } from "./pages/CartPage";
 import { CheckoutPage } from "./pages/CheckoutPage";
 import { PaymentPage } from "./pages/PaymentPage";
 import { OrderConfirmationPage } from "./pages/OrderConfirmationPage";
@@ -82,10 +81,6 @@ const router = createBrowserRouter([
       {
         path: "wishlist",
         element: <WishlistPage />,
-      },
-      {
-        path: "cart",
-        element: <CartPage />,
       },
       {
         path: "orders",

@@ -4,25 +4,22 @@ import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js"
 import { Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth.store";
-import { useCartStore } from "@/stores/cart.store";
 import { confirmPayment } from "@/services/order.service";
 
 interface StripePaymentFormProps {
   orderId: string;
   amount: number;
-  productId?: string;
 }
 
 function formatCurrency(n: number) {
   return `₹${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
-export function StripePaymentForm({ orderId, amount, productId }: StripePaymentFormProps) {
+export function StripePaymentForm({ orderId, amount }: StripePaymentFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const navigate = useNavigate();
   const { accessToken } = useAuthStore();
-  const { removeFromCart } = useCartStore();
 
   const [processing, setProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -56,12 +53,6 @@ export function StripePaymentForm({ orderId, amount, productId }: StripePaymentF
       // If payment succeeded, confirm with backend
       if (paymentIntent?.status === "succeeded") {
         await confirmPayment(accessToken, orderId);
-
-        // Remove from cart after successful payment
-        if (productId) {
-          removeFromCart(productId);
-        }
-
         navigate(`/orders/confirmation?order_id=${orderId}`);
       } else {
         setErrorMessage("Payment was not successful. Please try again.");

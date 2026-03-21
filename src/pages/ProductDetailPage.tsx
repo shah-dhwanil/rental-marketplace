@@ -1,4 +1,4 @@
-import { useLoaderData, Link } from "react-router";
+import { useLoaderData, Link, useNavigate } from "react-router";
 import { useState, useEffect } from "react";
 import { Heart, AlertCircle, ChevronDown, ChevronUp, Phone, MapPin, User, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import type { productDetailLoader } from "@/loaders";
-import { useWishlistStore, useCartStore, useRentalDatesStore } from "@/stores";
+import { useWishlistStore, useRentalDatesStore } from "@/stores";
 import { getVendorPublicProfile, type VendorPublicProfile, calculatePrice, type PriceCalculation } from "@/services/catalog.service";
 
 // ---------------------------------------------------------------------------
@@ -34,9 +34,9 @@ function formatINR(amount: number): string {
 
 export function ProductDetailPage() {
   const { product } = useLoaderData<typeof productDetailLoader>();
+  const navigate = useNavigate();
 
   const { isInWishlist, toggleWishlist } = useWishlistStore();
-  const { addToCart } = useCartStore();
   const { startDate, endDate, setStartDate, setEndDate, getDays } = useRentalDatesStore();
 
   const [expandedDevices, setExpandedDevices] = useState(true);
@@ -82,20 +82,15 @@ export function ProductDetailPage() {
   const pricingLabel = priceCalc?.pricing_tier ? priceCalc.pricing_tier.charAt(0).toUpperCase() + priceCalc.pricing_tier.slice(1) : "Daily";
   const pricingBreakdown = priceCalc?.breakdown ?? `${days}d × ₹${product.price_day ?? 0}`;
 
-  const handleAddToCart = () => {
-    addToCart({
-      productId: product.id,
-      productName: product.name,
-      productImage: product.image_urls?.[0] || "",
-      startDate: effectiveStart,
-      endDate: effectiveEnd,
-      dailyRate: rentalCost / days, // Use calculated rate per day
-      totalDays: days,
-      deposit,
-      deliveryMethod: "pickup",
-      deliveryFee: 0,
+  const handleBookNow = () => {
+    // Navigate to checkout with rental details as URL parameters
+    const params = new URLSearchParams({
+      product_id: product.id,
+      start_date: effectiveStart,
+      end_date: effectiveEnd,
+      delivery_method: "pickup",
     });
-    alert("Added to cart! View your cart to proceed with checkout.");
+    navigate(`/checkout?${params.toString()}`);
   };
 
   const images = product.image_urls ?? [];
@@ -380,11 +375,11 @@ export function ProductDetailPage() {
                 {/* Action Buttons */}
                 <div className="space-y-2 pt-1">
                   <Button
-                    onClick={handleAddToCart}
+                    onClick={handleBookNow}
                     className="w-full bg-primary hover:bg-purple-700 text-white py-3 font-bold text-base"
                     disabled={priceLoading}
                   >
-                    {priceLoading ? "Calculating..." : "Order / Rent Now"}
+                    {priceLoading ? "Calculating..." : "Proceed to Checkout"}
                   </Button>
                   <Button
                     onClick={() => toggleWishlist(product.id)}

@@ -7,9 +7,11 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional
 from uuid import UUID
 
+from api.products.repository import ProductRepository
 import structlog
 
 from api.cloudinary import CloudinaryClient
+from api.embedding import EmbeddingService
 from api.exceptions.app import AppException, ErrorTypes, UnkownAppException
 from api.models.pagination import PaginatedResponse
 from api.categories.repository import CategoryRepository
@@ -33,7 +35,7 @@ from api.products.models.responses import (
     ProductResponse,
     ProductSummaryResponse,
 )
-from api.products.repository import ProductRepository
+from api.settings.settings import get_settings
 
 logger = structlog.get_logger(__name__)
 
@@ -143,10 +145,12 @@ class ProductService:
         repo: ProductRepository,
         category_repo: CategoryRepository,
         cloudinary: CloudinaryClient,
+        embedding_service: EmbeddingService,
     ) -> None:
         self._repo = repo
         self._category_repo = category_repo
         self._cloudinary = cloudinary
+        self._embedding_service = embedding_service
 
     # -----------------------------------------------------------------------
     # Products
@@ -157,6 +161,11 @@ class ProductService:
             category = await self._category_repo.find_by_id(UUID(data.category_id))
             if not category:
                 raise AppException(ErrorTypes.ResourceNotFound, "Category not found", resource="category")
+
+            # Generate embedding for product including category name
+            embedding = await self._embedding_service.generate_product_embedding(
+                data.name, data.description, category["name"]
+            )
 
             row = await self._repo.create_product({
                 "name": data.name,
@@ -170,6 +179,7 @@ class ProductService:
                 "security_deposit": data.security_deposit,
                 "defect_charge": data.defect_charge,
                 "is_active": data.is_active,
+                "embedding": embedding,
             })
             logger.info("product_created", product_id=str(row["id"]), vendor_id=vendor_id)
             return _row_to_product(row)
@@ -192,13 +202,31 @@ class ProductService:
         lat: Optional[float] = None,
         lng: Optional[float] = None,
         radius_km: Optional[float] = None,
+        fts_weight: Optional[float] = None,
+        vector_weight: Optional[float] = None,
     ) -> PaginatedResponse[ProductSummaryResponse]:
         try:
             vid = UUID(vendor_id) if vendor_id else None
             cid = UUID(category_id) if category_id else None
+
+            # Use settings defaults if weights not provided
+            settings = get_settings()
+            fts_weight = fts_weight if fts_weight is not None else settings.SEARCH.FTS_WEIGHT
+            vector_weight = vector_weight if vector_weight is not None else settings.SEARCH.VECTOR_WEIGHT
+
+            # Generate query embedding if search query is provided
+            query_embedding = None
+            if q:
+                try:
+                    query_embedding = await self._embedding_service.generate_embedding(q)
+                    logger.info("query_embedding_generated", query=q)
+                except Exception as e:
+                    logger.warning("query_embedding_failed", error=str(e), query=q)
+                    # Continue without embedding - will fallback to basic ILIKE search
+
             rows, total = await self._repo.list_products(
-                page, page_size, vid, cid, is_active, q,
-                start_date, end_date, lat, lng, radius_km,
+                page, page_size, vid, cid, is_active, q, query_embedding,
+                start_date, end_date, lat, lng, radius_km, fts_weight, vector_weight,
             )
             return PaginatedResponse(
                 items=[_row_to_summary(r) for r in rows],
@@ -235,10 +263,17 @@ class ProductService:
                 raise ProductOwnershipException()
 
             fields: dict = {}
+            name_changed = False
+            desc_changed = False
+            category_changed = False
+            current_category = None
+
             if data.name is not None:
                 fields["name"] = data.name
+                name_changed = True
             if data.description is not None:
                 fields["description"] = data.description
+                desc_changed = True
             if data.properties is not None:
                 fields["properties"] = json.dumps(data.properties)
             if data.category_id is not None:
@@ -246,6 +281,8 @@ class ProductService:
                 if not category:
                     raise AppException(ErrorTypes.ResourceNotFound, "Category not found", resource="category")
                 fields["category_id"] = UUID(data.category_id)
+                current_category = category
+                category_changed = True
             if data.price_day is not None:
                 fields["price_day"] = data.price_day
             if data.price_week is not None:
@@ -258,6 +295,29 @@ class ProductService:
                 fields["defect_charge"] = data.defect_charge
             if data.is_active is not None:
                 fields["is_active"] = data.is_active
+
+            # Regenerate embedding if name, description, or category changed
+            if name_changed or desc_changed or category_changed:
+                current_name = data.name if name_changed else row["name"]
+                current_desc = data.description if desc_changed else row["description"]
+
+                # Get category name - use new category if changed, else fetch current
+                if category_changed and current_category:
+                    current_category_name = current_category["name"]
+                else:
+                    # Fetch current category name
+                    current_category_row = await self._category_repo.find_by_id(row["category_id"])
+                    current_category_name = current_category_row["name"] if current_category_row else ""
+
+                try:
+                    embedding = await self._embedding_service.generate_product_embedding(
+                        current_name, current_desc, current_category_name
+                    )
+                    fields["embedding"] = embedding
+                    logger.info("product_embedding_regenerated", product_id=product_id)
+                except Exception as e:
+                    logger.warning("embedding_regeneration_failed", error=str(e), product_id=product_id)
+                    # Continue without updating embedding
 
             updated = await self._repo.update_product(UUID(product_id), fields)
             return _row_to_product(updated)

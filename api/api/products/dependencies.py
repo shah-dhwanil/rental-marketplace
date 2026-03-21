@@ -6,6 +6,7 @@ from fastapi import Depends
 
 from api.cloudinary import get_cloudinary_client
 from api.database import get_db_pool
+from api.embedding import get_embedding_service
 from api.categories.repository import CategoryRepository
 from api.products.repository import ProductRepository
 from api.products.service import ProductService
@@ -25,7 +26,12 @@ def get_product_service(
     repo: Annotated[ProductRepository, Depends(get_product_repository)],
     category_repo: Annotated[CategoryRepository, Depends(get_category_repository_for_products)],
 ) -> ProductService:
-    return ProductService(repo, category_repo, get_cloudinary_client())
+    return ProductService(
+        repo,
+        category_repo,
+        get_cloudinary_client(),
+        get_embedding_service(),
+    )
 
 
 ProductServiceDep = Annotated[ProductService, Depends(get_product_service)]
