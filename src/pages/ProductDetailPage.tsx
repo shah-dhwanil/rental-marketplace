@@ -1,6 +1,6 @@
 import { useLoaderData, Link, useNavigate } from "react-router";
 import { useState, useEffect } from "react";
-import { Heart, AlertCircle, ChevronDown, ChevronUp, Phone, MapPin, User, X, Loader2 } from "lucide-react";
+import { Heart, AlertCircle, ChevronDown, ChevronUp, Phone, MapPin, User, X, Loader2, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +33,7 @@ function formatINR(amount: number): string {
 // ---------------------------------------------------------------------------
 
 export function ProductDetailPage() {
-  const { product } = useLoaderData<typeof productDetailLoader>();
+  const { product, reviews, reviewStats } = useLoaderData<typeof productDetailLoader>();
   const navigate = useNavigate();
 
   const { isInWishlist, toggleWishlist } = useWishlistStore();
@@ -98,6 +98,11 @@ export function ProductDetailPage() {
   // Product properties (JSONB → readable key-value pairs)
   const properties = product.properties as Record<string, unknown> | undefined;
   const propertyEntries = properties ? Object.entries(properties).filter(([, v]) => v !== null && v !== "") : [];
+  const totalReviews = reviewStats?.total_reviews ?? reviews.length;
+  const avgRating = reviewStats?.average_rating ?? 0;
+  const fullStars = Math.floor(avgRating);
+  const hasHalfStar = avgRating - fullStars >= 0.5;
+  const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
 
   return (
     <div className="bg-slate-50 dark:bg-slate-950 min-h-screen py-8">
@@ -160,8 +165,17 @@ export function ProductDetailPage() {
                   </Badge>
                   <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-1">{product.name}</h1>
                   <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                    <span className="text-amber-400">★★★★★</span>
-                    <span>(0 reviews)</span>
+                    <div className="flex items-center gap-0.5 text-amber-400" aria-label={`Rated ${avgRating.toFixed(1)} out of 5`}>
+                      {Array.from({ length: fullStars }).map((_, i) => (
+                        <Star key={`filled-${i}`} className="h-4 w-4 fill-current" />
+                      ))}
+                      {hasHalfStar && <Star key="half" className="h-4 w-4 fill-current opacity-60" />}
+                      {Array.from({ length: emptyStars }).map((_, i) => (
+                        <Star key={`empty-${i}`} className="h-4 w-4" />
+                      ))}
+                    </div>
+                    <span className="font-medium text-slate-700 dark:text-slate-300">{avgRating.toFixed(1)}</span>
+                    <span>({totalReviews} review{totalReviews !== 1 ? "s" : ""})</span>
                     {product.reserved_qty > 0 && (
                       <Badge variant="outline" className="ml-2">
                         {product.reserved_qty} units rented
@@ -482,7 +496,51 @@ export function ProductDetailPage() {
             <CardTitle>Customer Reviews</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-slate-500 dark:text-slate-400">No reviews yet. Be the first to review!</p>
+            {reviews.length === 0 ? (
+              <p className="text-sm text-slate-500 dark:text-slate-400">No reviews yet. Be the first to review!</p>
+            ) : (
+              <div className="space-y-4">
+                {reviews.map((review) => (
+                  <div
+                    key={review.id}
+                    className="rounded-lg border border-slate-200 dark:border-slate-700 p-4 bg-slate-50/60 dark:bg-slate-800/30"
+                  >
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                          {review.customer_name || "Verified Customer"}
+                        </p>
+                        {review.is_verified && (
+                          <Badge variant="outline" className="text-xs">Verified</Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1 text-amber-400">
+                        {Array.from({ length: 5 }).map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`h-4 w-4 ${i < review.rating ? "fill-current" : ""}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">{review.comment}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                      {new Date(review.created_at).toLocaleDateString("en-IN", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </p>
+                    {review.vendor_response && (
+                      <div className="mt-3 rounded-md border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3">
+                        <p className="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">Vendor Response</p>
+                        <p className="text-sm text-slate-700 dark:text-slate-300">{review.vendor_response}</p>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

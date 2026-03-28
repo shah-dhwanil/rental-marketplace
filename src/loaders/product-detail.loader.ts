@@ -1,6 +1,6 @@
 import { type LoaderFunctionArgs } from "react-router";
 import { getProduct } from "@/services/catalog.service";
-import { getProductReviews } from "@/services/review.service";
+import { getProductReviews, getProductRatingStats } from "@/services/review.service";
 
 /**
  * Product detail page loader
@@ -14,18 +14,30 @@ export async function productDetailLoader({ params }: LoaderFunctionArgs) {
   }
 
   try {
-    const [product, reviews] = await Promise.all([
+    const [product, reviewList, reviewStats] = await Promise.all([
       getProduct(id),
-      getProductReviews(id).catch(() => []), // Reviews are optional, don't fail if error
+      getProductReviews(id).catch(() => ({
+        items: [],
+        total: 0,
+        page: 1,
+        page_size: 10,
+        total_pages: 0,
+      })), // Reviews are optional, don't fail if error
+      getProductRatingStats(id).catch(() => ({
+        product_id: id,
+        average_rating: 0,
+        total_reviews: 0,
+        rating_distribution: {},
+      })), // Stats are optional, don't fail if error
     ]);
 
     return {
       product,
-      reviews,
+      reviews: reviewList.items,
+      reviewStats,
     };
   } catch (error) {
     console.error("Failed to load product:", error);
     throw new Response("Product not found", { status: 404 });
   }
 }
-
