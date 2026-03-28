@@ -71,10 +71,25 @@ export async function updateOrderStatus(
   orderId: string,
   status: string,
   cancellationReason?: string,
+  defectCharge?: {
+    amount: number;
+    description: string;
+    images?: string[];
+  },
 ): Promise<Order> {
+  const body: any = { status, cancellation_reason: cancellationReason };
+  
+  if (defectCharge) {
+    body.defect_charge = {
+      amount: defectCharge.amount,
+      description: defectCharge.description,
+      images: defectCharge.images || [],
+    };
+  }
+  
   return apiFetch<Order>(`/orders/${orderId}/status`, {
     method: "PATCH",
-    body: JSON.stringify({ status, cancellation_reason: cancellationReason }),
+    body: JSON.stringify(body),
   }, token);
 }
 

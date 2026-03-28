@@ -2,11 +2,15 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import {
   ArrowLeft, Loader2, AlertCircle, FileText, Package,
-  Calendar, User, CheckCircle, Truck, XCircle,
+  Calendar, User, CheckCircle, Truck, XCircle, DollarSign, Upload, X as CloseIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { useAuthStore } from "@/stores/auth.store";
 import { getOrder, updateOrderStatus, downloadOrderPdf } from "@/services/order.service";
+import { getOrderDefects, type DefectCharge } from "@/services/defect.service";
 import type { Order } from "@/schemas/order.schema";
 import { ApiError } from "@/lib/api";
 
@@ -61,6 +65,14 @@ export function VendorOrderDetailPage() {
   const [cancelReason, setCancelReason] = useState("");
   const [showCancelInput, setShowCancelInput] = useState(false);
   const [downloading, setDownloading] = useState<"invoice" | "contract" | null>(null);
+  
+  // Defect charge state
+  const [showDefectForm, setShowDefectForm] = useState(false);
+  const [defectAmount, setDefectAmount] = useState("");
+  const [defectDescription, setDefectDescription] = useState("");
+  const [defectImages, setDefectImages] = useState<string[]>([]);
+  const [defects, setDefects] = useState<DefectCharge[]>([]);
+  const [loadingDefects, setLoadingDefects] = useState(false);
 
   async function handleDownload(type: "invoice" | "contract") {
     if (!accessToken || !orderId) return;
@@ -79,6 +91,13 @@ export function VendorOrderDetailPage() {
       .then(setOrder)
       .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load order."))
       .finally(() => setLoading(false));
+    
+    // Load defects for this order
+    setLoadingDefects(true);
+    getOrderDefects(accessToken, orderId)
+      .then((data) => setDefects(data.items))
+      .catch(() => setDefects([]))
+      .finally(() => setLoadingDefects(false));
   }, [orderId, accessToken]);
 
   async function handleStatusUpdate(newStatus: string) {
@@ -87,12 +106,46 @@ export function VendorOrderDetailPage() {
       setShowCancelInput(true);
       return;
     }
+    
+    // If completing order, show defect form option
+    if (newStatus === "completed" && !showDefectForm) {
+      setShowDefectForm(true);
+      return;
+    }
+    
     setUpdatingStatus(newStatus);
     setUpdateError(null);
     try {
-      const updated = await updateOrderStatus(accessToken, orderId, newStatus, newStatus === "cancelled" ? cancelReason || undefined : undefined);
+      // Prepare defect charge data if applicable
+      const defectCharge =
+        newStatus === "completed" &&
+        defectAmount &&
+        defectDescription
+          ? {
+              amount: parseFloat(defectAmount),
+              description: defectDescription,
+              images: defectImages,
+            }
+          : undefined;
+      
+      const updated = await updateOrderStatus(
+        accessToken,
+        orderId,
+        newStatus,
+        newStatus === "cancelled" ? cancelReason || undefined : undefined,
+        defectCharge
+      );
       setOrder(updated);
       setShowCancelInput(false);
+      setShowDefectForm(false);
+      
+      // Clear defect form
+      setDefectAmount("");
+      setDefectDescription("");
+      setDefectImages([]);
+      
+      // Reload defects
+      getOrderDefects(accessToken, orderId).then((data) => setDefects(data.items)).catch(() => {});
     } catch (err) {
       setUpdateError(err instanceof ApiError ? err.message : "Failed to update order status.");
     } finally {
@@ -206,6 +259,44 @@ export function VendorOrderDetailPage() {
         </div>
       </div>
 
+      {/* Defect Charges */}
+      {defects.length > 0 && (
+        <div className="rounded-xl border border-border bg-background p-4 space-y-3">
+          <h2 className="font-semibold text-sm flex items-center gap-2">
+            <DollarSign className="size-4 text-primary" /> Defect Charges
+          </h2>
+          {defects.map((defect) => (
+            <div key={defect.id} className="border-l-4 border-orange-500 pl-3 py-2 space-y-1">
+              <div className="flex justify-between items-start">
+                <span className="font-medium">{formatCurrency(defect.amount)}</span>
+                <span className={`text-xs px-2 py-1 rounded ${
+                  defect.status === "paid"
+                    ? "bg-green-100 text-green-700"
+                    : defect.status === "pending"
+                    ? "bg-yellow-100 text-yellow-700"
+                    : "bg-gray-100 text-gray-700"
+                }`}>
+                  {defect.status}
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground">{defect.description}</p>
+              {defect.images.length > 0 && (
+                <div className="flex gap-2 mt-2">
+                  {defect.images.map((img, idx) => (
+                    <img
+                      key={idx}
+                      src={img}
+                      alt={`Defect ${idx + 1}`}
+                      className="w-16 h-16 object-cover rounded"
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Status actions */}
       {transitions.length > 0 && (
         <div className="space-y-3">
@@ -224,6 +315,48 @@ export function VendorOrderDetailPage() {
               />
             </div>
           )}
+          
+          {/* Defect Charge Form */}
+          {showDefectForm && (
+            <div className="rounded-xl border border-orange-500/30 bg-orange-50 dark:bg-orange-950/20 p-4 space-y-3">
+              <h3 className="font-semibold text-sm">Add Defect Charge (Optional)</h3>
+              <p className="text-xs text-muted-foreground">
+                Document any damages or missing items. Customer will be notified and charged separately.
+              </p>
+              <div className="space-y-3">
+                <div>
+                  <Label htmlFor="defect-amount" className="text-sm">Amount (₹)</Label>
+                  <Input
+                    id="defect-amount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={defectAmount}
+                    onChange={(e) => setDefectAmount(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="defect-description" className="text-sm">Description</Label>
+                  <Textarea
+                    id="defect-description"
+                    placeholder="Describe the defect or damage..."
+                    value={defectDescription}
+                    onChange={(e) => setDefectDescription(e.target.value)}
+                    rows={3}
+                    className="mt-1"
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {defectAmount && defectDescription.length >= 10
+                    ? "✓ Ready to add defect charge"
+                    : "Fill amount and description to add defect charge"}
+                </p>
+              </div>
+            </div>
+          )}
+          
           <div className="flex gap-2 flex-wrap">
             {transitions.map(({ status: newStatus, label, icon: Icon }) => (
               <Button
@@ -235,12 +368,32 @@ export function VendorOrderDetailPage() {
                 className="gap-1.5"
               >
                 {updatingStatus === newStatus ? <Loader2 className="size-3.5 animate-spin" /> : <Icon className="size-3.5" />}
-                {showCancelInput && newStatus === "cancelled" ? "Confirm Cancel" : label}
+                {showCancelInput && newStatus === "cancelled"
+                  ? "Confirm Cancel"
+                  : showDefectForm && newStatus === "completed"
+                  ? defectAmount && defectDescription
+                    ? "Complete with Defect Charge"
+                    : "Complete without Defect Charge"
+                  : label}
               </Button>
             ))}
             {showCancelInput && (
               <Button size="sm" variant="outline" onClick={() => { setShowCancelInput(false); setCancelReason(""); }}>
                 Keep Order
+              </Button>
+            )}
+            {showDefectForm && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setShowDefectForm(false);
+                  setDefectAmount("");
+                  setDefectDescription("");
+                  setDefectImages([]);
+                }}
+              >
+                Cancel
               </Button>
             )}
           </div>

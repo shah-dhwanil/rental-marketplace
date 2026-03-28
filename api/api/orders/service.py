@@ -333,9 +333,54 @@ class OrderService:
                 raise OrderNotFoundException(order_id)
             self._assert_access(order, caller_id, caller_role)
             self._validate_status_transition(order["status"], data.status, caller_role)
+            
+            # If marking as completed with a defect charge, create it first
+            defect_charge_amount = None
+            if data.status == "completed" and data.defect_charge and caller_role == "vendor":
+                try:
+                    # Import here to avoid circular dependency
+                    from api.defects.repository import DefectRepository
+                    from api.defects.service import DefectService
+                    from api.defects.models.requests import CreateDefectChargeRequest
+                    from api.database import get_db_pool
+                    
+                    db_pool = get_db_pool()
+                    defect_repo = DefectRepository(db_pool)
+                    defect_service = DefectService(defect_repo)
+                    
+                    defect_request = CreateDefectChargeRequest(
+                        amount=data.defect_charge.amount,
+                        description=data.defect_charge.description,
+                        images=data.defect_charge.images,
+                    )
+                    
+                    defect_response = await defect_service.create_defect_charge(
+                        order_id=UUID(order_id),
+                        vendor_id=UUID(caller_id),
+                        request=defect_request,
+                    )
+                    
+                    defect_charge_amount = float(data.defect_charge.amount)
+                    logger.info(
+                        "defect_charge_created_with_order_completion",
+                        order_id=order_id,
+                        defect_id=defect_response.id,
+                        amount=defect_charge_amount,
+                    )
+                except Exception as exc:
+                    logger.error("defect_charge_creation_failed", order_id=order_id, exc_info=True)
+                    # Don't fail the order completion if defect charge fails
+                    # but log the error
+            
             updated = await self._orders.update_status(UUID(order_id), data.status, data.cancellation_reason)
+            
+            # Add defect charge info to response if created
+            response = _row_to_response(updated)
+            if defect_charge_amount is not None:
+                response.defect_charge = defect_charge_amount
+            
             logger.info("order_status_updated", order_id=order_id, status=data.status)
-            return _row_to_response(updated)
+            return response
         except AppException:
             raise
         except Exception as exc:

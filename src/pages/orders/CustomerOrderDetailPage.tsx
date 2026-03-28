@@ -2,12 +2,15 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import {
   ArrowLeft, Loader2, AlertCircle, FileText, Package,
-  MapPin, Calendar, Tag, XCircle, Truck,
+  MapPin, Calendar, Tag, XCircle, Truck, Star,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/auth.store";
 import { getOrder, updateOrderStatus, downloadOrderPdf } from "@/services/order.service";
+import { getOrderReview } from "@/services/review.service";
+import { ReviewModal } from "@/components/reviews";
 import type { Order } from "@/schemas/order.schema";
+import type { Review } from "@/schemas/review.schema";
 import { ApiError } from "@/lib/api";
 
 function formatDate(d: string) {
@@ -50,6 +53,9 @@ export function CustomerOrderDetailPage() {
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [downloading, setDownloading] = useState<"invoice" | "contract" | null>(null);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [existingReview, setExistingReview] = useState<Review | null>(null);
+  const [loadingReview, setLoadingReview] = useState(false);
 
   async function handleDownload(type: "invoice" | "contract") {
     if (!accessToken || !orderId) return;
@@ -69,6 +75,16 @@ export function CustomerOrderDetailPage() {
       .catch((err) => setError(err instanceof ApiError ? err.message : "Failed to load order."))
       .finally(() => setLoading(false));
   }, [orderId, accessToken]);
+
+  // Load review if order is completed
+  useEffect(() => {
+    if (!orderId || !order || order.status !== "completed") return;
+    setLoadingReview(true);
+    getOrderReview(orderId)
+      .then(setExistingReview)
+      .catch(() => setExistingReview(null))
+      .finally(() => setLoadingReview(false));
+  }, [orderId, order]);
 
   async function handleCancel() {
     if (!accessToken || !orderId) return;
@@ -194,6 +210,47 @@ export function CustomerOrderDetailPage() {
         </div>
       )}
 
+      {/* Write Review - for completed orders */}
+      {order.status === "completed" && !loadingReview && (
+        <div className="rounded-xl border border-border bg-background p-4 space-y-3">
+          <h2 className="font-semibold flex items-center gap-2 text-sm">
+            <Star className="size-4 text-primary" /> Review
+          </h2>
+          {existingReview ? (
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">You reviewed this product</p>
+              <div className="flex items-center gap-2">
+                <div className="flex">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`size-4 ${star <= existingReview.rating ? "text-yellow-400 fill-yellow-400" : "text-gray-300"}`}
+                    />
+                  ))}
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  {new Date(existingReview.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+              <p className="text-sm">{existingReview.comment}</p>
+            </div>
+          ) : (
+            <div>
+              <p className="text-sm text-muted-foreground mb-3">
+                Share your experience with this product to help other customers.
+              </p>
+              <Button 
+                variant="outline" 
+                className="w-full gap-2"
+                onClick={() => setShowReviewModal(true)}
+              >
+                <Star className="size-4" /> Write a Review
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Cancel order */}
       {canCancel && (
         <div className="space-y-3">
@@ -221,6 +278,21 @@ export function CustomerOrderDetailPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Review Modal */}
+      {showReviewModal && order && (
+        <ReviewModal
+          isOpen={showReviewModal}
+          onClose={() => setShowReviewModal(false)}
+          orderId={order.id}
+          productId={order.product_id}
+          productName={order.product_name || "Product"}
+          onSuccess={() => {
+            // Reload review after submission
+            getOrderReview(order.id).then(setExistingReview).catch(() => {});
+          }}
+        />
       )}
     </div>
   );

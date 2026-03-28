@@ -1,8 +1,9 @@
 """Request models for the orders module."""
 from datetime import date
 from typing import Literal, Optional
+from decimal import Decimal
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, model_validator, Field
 
 
 class CreateOrderRequest(BaseModel):
@@ -40,6 +41,14 @@ class ConfirmPaymentRequest(BaseModel):
     pass
 
 
+class DefectChargeData(BaseModel):
+    """Defect charge data when completing an order."""
+    amount: Decimal = Field(..., gt=0, description="Defect charge amount")
+    description: str = Field(..., min_length=10, max_length=500, description="Description of defect")
+    images: list[str] = Field(default_factory=list, description="Defect evidence images")
+
+
 class UpdateOrderStatusRequest(BaseModel):
     status: Literal["active", "completed", "cancelled"]
     cancellation_reason: Optional[str] = None
+    defect_charge: Optional[DefectChargeData] = None  # Only used when status = "completed"

@@ -35,14 +35,14 @@ CREATE TRIGGER trg_products_search_vector
     FOR EACH ROW EXECUTE FUNCTION products_search_vector_trigger();
 
 -- Backfill search_vector for existing products with category names
-UPDATE products
+UPDATE products p
 SET search_vector = (
     SELECT
         setweight(to_tsvector('english', COALESCE(c.name, '')), 'A') ||
         setweight(to_tsvector('english', COALESCE(p.name, '')), 'B') ||
         setweight(to_tsvector('english', COALESCE(p.description, '')), 'C')
     FROM categories c
-    WHERE c.id = products.category_id AND c.is_deleted = FALSE
+    WHERE c.id = p.category_id AND c.is_deleted = FALSE
 )
 WHERE search_vector IS NOT NULL;
 

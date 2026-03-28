@@ -21,6 +21,8 @@ from api.payments.router import router as payments_router
 from api.promos.router import router as promos_router
 from api.wishlists.router import router as wishlists_router
 from api.orders.router import router as orders_router
+from api.reviews.router import router as reviews_router
+from api.defects.router import router as defects_router
 
 # Load settings
 settings = get_settings()
@@ -71,6 +73,8 @@ def create_app() -> FastAPI:
     app.include_router(promos_router)
     app.include_router(wishlists_router)
     app.include_router(orders_router)
+    app.include_router(reviews_router)
+    app.include_router(defects_router)
     return app
 
 
