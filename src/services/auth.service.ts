@@ -72,7 +72,18 @@ export async function vendorStep2(
 ): Promise<TempTokenResponse> {
   const raw = await apiFetch<unknown>(
     "/users/register/vendor/complete",
-    { method: "POST", body: JSON.stringify(data) },
+    {
+      method: "POST",
+      body: JSON.stringify({
+        name: data.name,
+        gst_no: data.gst_no,
+        address: data.address,
+        city: data.city,
+        pincode: data.pincode,
+        lat: data.lat,
+        lng: data.lng,
+      })
+    },
     tempToken,
   );
   return TempTokenResponseSchema.parse(raw);
@@ -86,7 +97,12 @@ export async function vendorStep3(
 ): Promise<TokenResponse> {
   const raw = await apiFetch<unknown>(
     "/users/register/vendor/bank",
-    { method: "POST", body: JSON.stringify(data) },
+    {
+      method: "POST",
+      body: JSON.stringify({
+        bank_details: data.bank_details,
+      })
+    },
     tempToken,
   );
   return TokenResponseSchema.parse(raw);

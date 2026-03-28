@@ -114,7 +114,7 @@ class UserService:
                     await self._repo.create_delivery_partner(user_id, conn=conn)
 
             logger.info("user_registered_step1", user_id=str(user_id), role=data.role)
-            return TempTokenResponse(temp_token=create_temp_token(str(user_id), data.role))
+            return TempTokenResponse(temp_token=create_temp_token(str(user_id), data.role), registration_step=1)
 
         except AppException:
             raise
@@ -159,7 +159,7 @@ class UserService:
                 "pincode": data.pincode,
             }
             await self._repo.update_vendor(UUID(user_id), fields, lat=data.lat, lng=data.lng)
-            return TempTokenResponse(temp_token=create_temp_token(user_id, "vendor"))
+            return TempTokenResponse(temp_token=create_temp_token(user_id, "vendor"), registration_step=2)
         except AppException:
             raise
         except Exception as exc:

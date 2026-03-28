@@ -87,6 +87,7 @@ class ProductRepository:
         radius_km: Optional[float] = None,
         fts_weight: float = 0.4,
         vector_weight: float = 0.6,
+        min_relevance_threshold: float = 0.1,
         *,
         conn: Optional[asyncpg.Connection] = None,
     ) -> tuple[list[dict], int]:
@@ -94,11 +95,11 @@ class ProductRepository:
             async with self._db.acquire() as _conn:
                 return await self._list_products(
                     _conn, page, page_size, vendor_id, category_id, is_active, q, query_embedding,
-                    start_date, end_date, lat, lng, radius_km, fts_weight, vector_weight,
+                    start_date, end_date, lat, lng, radius_km, fts_weight, vector_weight, min_relevance_threshold,
                 )
         return await self._list_products(
             conn, page, page_size, vendor_id, category_id, is_active, q, query_embedding,
-            start_date, end_date, lat, lng, radius_km, fts_weight, vector_weight,
+            start_date, end_date, lat, lng, radius_km, fts_weight, vector_weight, min_relevance_threshold,
         )
 
     async def _list_products(
@@ -118,6 +119,7 @@ class ProductRepository:
         radius_km: Optional[float] = None,
         fts_weight: float = 0.4,
         vector_weight: float = 0.6,
+        min_relevance_threshold: float = 0.1,
     ) -> tuple[list[dict], int]:
         conditions = ["p.is_deleted = FALSE"]
         params: list = []
@@ -147,13 +149,8 @@ class ProductRepository:
             # ts_rank returns a score, cosine distance returns 0-2 (we convert to similarity: 1 - distance)
             # Normalize both scores to 0-1 range and apply weights
 
-            # Add full-text search condition (optional - we can include all and rank by score)
-            # conditions.append(f"p.search_vector @@ plainto_tsquery('english', ${idx})")
-            # idx += 1
-
-            # We'll compute hybrid score in SELECT and order by it
-            # Note: vector cosine distance in pgvector returns 0 (most similar) to 2 (least similar)
-            # We convert to similarity: 1 - (distance / 2) to get 0-1 range
+            # We'll filter by relevance threshold in the SELECT clause instead of here
+            # to allow proper parameter counting
             pass  # Will be handled in SELECT
 
         elif q:
@@ -204,41 +201,50 @@ class ProductRepository:
 
         where = " AND ".join(conditions)
 
-        # Count total matching products
-        count_row = await conn.fetchrow(f"SELECT COUNT(*) FROM products p WHERE {where}", *params)
-        total = count_row[0]
+        # For hybrid search, we need to prepare parameters properly
+        if use_hybrid_search:
+            # Add query and embedding to params for both count and select
+            search_params = params + [q, query_embedding]
+            query_param_idx = len(params) + 1  # q parameter position
+            embedding_param_idx = len(params) + 2  # query_embedding parameter position
+
+            # Build hybrid scoring expressions
+            fts_score = f"ts_rank_cd(p.search_vector, plainto_tsquery('english', ${query_param_idx}), 32)"
+            vector_score = f"GREATEST(0, 1 - (p.embedding <=> ${embedding_param_idx}::vector) / 2.0)"
+            hybrid_score = f"({fts_weight} * {fts_score} + {vector_weight} * {vector_score})"
+
+            # Count total matching products with relevance threshold
+            count_row = await conn.fetchrow(f"""
+                SELECT COUNT(*)
+                FROM products p
+                WHERE {where} AND {hybrid_score} >= {min_relevance_threshold}
+            """, *search_params)
+            total = count_row[0]
+        else:
+            count_row = await conn.fetchrow(f"SELECT COUNT(*) FROM products p WHERE {where}", *params)
+            total = count_row[0]
+
         offset = (page - 1) * page_size
 
         # Build SELECT with hybrid scoring if applicable
         if use_hybrid_search:
-            # Hybrid search query with weighted scoring
-            query_param_idx = idx
-            embedding_param_idx = idx + 1
+            # Add pagination parameters
+            final_params = search_params + [page_size, offset]
+            limit_param_idx = len(search_params) + 1
+            offset_param_idx = len(search_params) + 2
 
-            # Full-text search score with enhanced category weighting
-            # Use ts_rank_cd with category-aware normalization
-            # The search_vector now contains: A=category, B=name, C=description
-            # Using normalization flag 32 for document length + unique word count normalization
-            fts_score = f"ts_rank_cd(p.search_vector, plainto_tsquery('english', ${query_param_idx}), 32)"
-
-            # Vector similarity score (convert cosine distance to similarity: 1 - distance/2)
-            # Cosine distance in pgvector: 0 = identical, 2 = opposite
-            vector_score = f"GREATEST(0, 1 - (p.embedding <=> ${embedding_param_idx}::vector) / 2.0)"
-
-            # Combined hybrid score
-            hybrid_score = f"({fts_weight} * {fts_score} + {vector_weight} * {vector_score})"
-
+            # Hybrid search query with weighted scoring and relevance filtering
             select_query = f"""
                 SELECT p.*,
                        {hybrid_score} as relevance_score
                 FROM products p
                 WHERE {where}
+                  AND {hybrid_score} >= {min_relevance_threshold}
                 ORDER BY relevance_score DESC, p.created_at DESC
-                LIMIT ${embedding_param_idx + 1} OFFSET ${embedding_param_idx + 2}
+                LIMIT ${limit_param_idx} OFFSET ${offset_param_idx}
             """
 
-            params.extend([q, query_embedding, page_size, offset])
-            rows = await conn.fetch(select_query, *params)
+            rows = await conn.fetch(select_query, *final_params)
 
         else:
             # No hybrid search - standard query

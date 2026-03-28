@@ -213,6 +213,7 @@ class ProductService:
             settings = get_settings()
             fts_weight = fts_weight if fts_weight is not None else settings.SEARCH.FTS_WEIGHT
             vector_weight = vector_weight if vector_weight is not None else settings.SEARCH.VECTOR_WEIGHT
+            min_relevance_threshold = settings.SEARCH.MIN_RELEVANCE_THRESHOLD
 
             # Generate query embedding if search query is provided
             query_embedding = None
@@ -226,7 +227,7 @@ class ProductService:
 
             rows, total = await self._repo.list_products(
                 page, page_size, vid, cid, is_active, q, query_embedding,
-                start_date, end_date, lat, lng, radius_km, fts_weight, vector_weight,
+                start_date, end_date, lat, lng, radius_km, fts_weight, vector_weight, min_relevance_threshold,
             )
             return PaginatedResponse(
                 items=[_row_to_summary(r) for r in rows],

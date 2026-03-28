@@ -31,3 +31,7 @@ class SearchConfig(BaseSettings):
         default=0.4,
         description="Weight for vector similarity score in hybrid search (0-1) - decreased to balance with enhanced FTS",
     )
+    MIN_RELEVANCE_THRESHOLD: float = Field(
+        default=0.1,
+        description="Minimum combined relevance score threshold for hybrid search results (0-1) - filters out irrelevant results",
+    )
