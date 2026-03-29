@@ -175,6 +175,9 @@ export function CustomerOrderDetailPage() {
           {order.damage_amount > 0 && (
             <div className="flex justify-between text-destructive"><span>Damage Charge</span><span>{formatCurrency(order.damage_amount)}</span></div>
           )}
+          {/* {(order.defect_charge ?? 0) > 0 && (
+            <div className="flex justify-between text-destructive"><span>Defect Charge</span><span>{formatCurrency(order.defect_charge ?? 0)}</span></div>
+          )} */}
           <div className="border-t pt-2 flex justify-between font-semibold text-base">
             <span>Grand Total</span><span>{formatCurrency(order.grand_total)}</span>
           </div>

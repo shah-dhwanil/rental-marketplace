@@ -1,6 +1,6 @@
 import { useLoaderData, useSearchParams, Link } from "react-router";
 import { useState } from "react";
-import { Heart, Search as SearchIcon, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { Heart, Search as SearchIcon, X, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -184,18 +184,31 @@ export function SearchPage() {
                           />
                         </button>
                       </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <div className="flex text-amber-400 dark:text-amber-500">
+                          {[...Array(5)].map((_, i) => (
+                            <Star key={i} className={`h-3 w-3 ${i < Math.floor(product.average_rating || 0) ? "fill-current" : "text-slate-200 dark:text-slate-700"}`} />
+                          ))}
+                        </div>
+                        <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">
+                          ({product.total_reviews || 0})
+                        </span>
+                      </div>
+
                       <div className="flex items-baseline gap-1">
                         <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
                           {formatINR(product.price_day)}
                         </span>
                         <span className="text-xs text-slate-500 dark:text-slate-400">/day</span>
                       </div>
+                      <Link to={`/product/${product.id}`}>
                       <Button
-                        onClick={() => handleAddToCart(product)}
                         className="w-full bg-primary hover:bg-purple-700 text-white font-semibold py-1.5 rounded-lg text-sm"
                       >
-                        Add to Cart
+                        View Product
                       </Button>
+                      </Link>
                     </CardContent>
                   </Card>
                 </div>

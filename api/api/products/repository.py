@@ -101,7 +101,6 @@ class ProductRepository:
             conn, page, page_size, vendor_id, category_id, is_active, q, query_embedding,
             start_date, end_date, lat, lng, radius_km, fts_weight, vector_weight, min_relevance_threshold,
         )
-
     async def _list_products(
         self,
         conn: asyncpg.Connection,
@@ -121,125 +120,131 @@ class ProductRepository:
         vector_weight: float = 0.6,
         min_relevance_threshold: float = 0.1,
     ) -> tuple[list[dict], int]:
+
         conditions = ["p.is_deleted = FALSE"]
         params: list = []
         idx = 1
 
-        # Determine if we're using hybrid search
         use_hybrid_search = q and query_embedding
 
         if vendor_id is not None:
             conditions.append(f"p.vendor_id = ${idx}")
             params.append(vendor_id)
             idx += 1
+
         if category_id is not None:
             conditions.append(f"p.category_id = ${idx}")
             params.append(category_id)
             idx += 1
+
         if is_active is not None:
             conditions.append(f"p.is_active = ${idx}")
             params.append(is_active)
             idx += 1
 
-        # Build search condition and ordering
         order_clause = "p.created_at DESC"
 
-        if use_hybrid_search:
-            # Hybrid search: combine FTS and vector similarity
-            # ts_rank returns a score, cosine distance returns 0-2 (we convert to similarity: 1 - distance)
-            # Normalize both scores to 0-1 range and apply weights
-
-            # We'll filter by relevance threshold in the SELECT clause instead of here
-            # to allow proper parameter counting
-            pass  # Will be handled in SELECT
-
-        elif q:
-            # Fallback to simple ILIKE if no embedding provided
+        if not use_hybrid_search and q:
             conditions.append(f"p.name ILIKE ${idx}")
             params.append(f"%{q}%")
             idx += 1
 
-        # Availability filter: product must have at least one active, unbooked device
+        # Availability filter
         if start_date is not None and end_date is not None:
             conditions.append(
                 f"""EXISTS (
                     SELECT 1 FROM devices d
                     WHERE d.product_id = p.id
-                      AND d.is_deleted = FALSE
-                      AND d.is_active = TRUE
-                      AND NOT EXISTS (
-                          SELECT 1 FROM orders o
-                          WHERE o.device_id = d.id
+                    AND d.is_deleted = FALSE
+                    AND d.is_active = TRUE
+                    AND NOT EXISTS (
+                        SELECT 1 FROM orders o
+                        WHERE o.device_id = d.id
                             AND o.status IN ('confirmed', 'active')
                             AND o.start_date <= ${idx + 1}
                             AND o.end_date >= ${idx}
-                      )
+                    )
                 )"""
             )
-            params.append(start_date)   # ${idx}   — rental start
-            params.append(end_date)     # ${idx+1} — rental end
+            params.append(start_date)
+            params.append(end_date)
             idx += 2
 
-        # Geo filter: vendor must be within radius_km of (lat, lng)
+        # Geo filter
         if lat is not None and lng is not None:
             radius_m = (radius_km or 20.0) * 1000
             conditions.append(
                 f"""p.vendor_id IN (
                     SELECT v.id FROM vendors v
                     WHERE v.is_deleted = FALSE
-                      AND ST_DWithin(
-                          v.location::geography,
-                          ST_SetSRID(ST_MakePoint(${idx + 1}, ${idx}), 4326)::geography,
-                          ${idx + 2}
-                      )
+                    AND ST_DWithin(
+                        v.location::geography,
+                        ST_SetSRID(ST_MakePoint(${idx + 1}, ${idx}), 4326)::geography,
+                        ${idx + 2}
+                    )
                 )"""
             )
-            params.append(lat)       # ${idx}
-            params.append(lng)       # ${idx+1}
-            params.append(radius_m)  # ${idx+2}
+            params.append(lat)
+            params.append(lng)
+            params.append(radius_m)
             idx += 3
 
         where = " AND ".join(conditions)
 
-        # For hybrid search, we need to prepare parameters properly
-        if use_hybrid_search:
-            # Add query and embedding to params for both count and select
-            search_params = params + [q, query_embedding]
-            query_param_idx = len(params) + 1  # q parameter position
-            embedding_param_idx = len(params) + 2  # query_embedding parameter position
+        # ✅ Rating LATERAL JOIN (used in both queries)
+        rating_join = """
+            LEFT JOIN LATERAL (
+                SELECT 
+                    COALESCE(ROUND(AVG(pr.rating)::numeric, 2), 0) AS average_rating,
+                    COUNT(pr.id) AS total_reviews
+                FROM product_reviews pr
+                WHERE pr.product_id = p.id
+            ) rating_stats ON TRUE
+        """
 
-            # Build hybrid scoring expressions
+        # ---------------- COUNT ----------------
+        if use_hybrid_search:
+            search_params = params + [q, query_embedding]
+            query_param_idx = len(params) + 1
+            embedding_param_idx = len(params) + 2
+
             fts_score = f"ts_rank_cd(p.search_vector, plainto_tsquery('english', ${query_param_idx}), 32)"
             vector_score = f"GREATEST(0, 1 - (p.embedding <=> ${embedding_param_idx}::vector) / 2.0)"
             hybrid_score = f"({fts_weight} * {fts_score} + {vector_weight} * {vector_score})"
 
-            # Count total matching products with relevance threshold
             count_row = await conn.fetchrow(f"""
                 SELECT COUNT(*)
                 FROM products p
                 WHERE {where} AND {hybrid_score} >= {min_relevance_threshold}
             """, *search_params)
+
             total = count_row[0]
+
         else:
-            count_row = await conn.fetchrow(f"SELECT COUNT(*) FROM products p WHERE {where}", *params)
+            count_row = await conn.fetchrow(
+                f"SELECT COUNT(*) FROM products p WHERE {where}",
+                *params
+            )
             total = count_row[0]
 
         offset = (page - 1) * page_size
 
-        # Build SELECT with hybrid scoring if applicable
+        # ---------------- SELECT ----------------
         if use_hybrid_search:
-            # Add pagination parameters
             final_params = search_params + [page_size, offset]
             limit_param_idx = len(search_params) + 1
             offset_param_idx = len(search_params) + 2
 
-            # Hybrid search query with weighted scoring and relevance filtering
             select_query = f"""
-                SELECT p.*,
-                       {hybrid_score} as relevance_score
+                SELECT 
+                    p.*,
+                    rating_stats.average_rating,
+                    rating_stats.total_reviews,
+                    {hybrid_score} AS relevance_score
                 FROM products p
+                {rating_join}
                 WHERE {where}
-                  AND {hybrid_score} >= {min_relevance_threshold}
+                AND {hybrid_score} >= {min_relevance_threshold}
                 ORDER BY relevance_score DESC, p.created_at DESC
                 LIMIT ${limit_param_idx} OFFSET ${offset_param_idx}
             """
@@ -247,9 +252,18 @@ class ProductRepository:
             rows = await conn.fetch(select_query, *final_params)
 
         else:
-            # No hybrid search - standard query
             rows = await conn.fetch(
-                f"SELECT p.* FROM products p WHERE {where} ORDER BY {order_clause} LIMIT ${idx} OFFSET ${idx + 1}",
+                f"""
+                SELECT 
+                    p.*,
+                    rating_stats.average_rating,
+                    rating_stats.total_reviews
+                FROM products p
+                {rating_join}
+                WHERE {where}
+                ORDER BY {order_clause}
+                LIMIT ${idx} OFFSET ${idx + 1}
+                """,
                 *params,
                 page_size,
                 offset,

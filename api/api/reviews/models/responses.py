@@ -16,7 +16,7 @@ class ReviewResponse(BaseModel):
     customer_avatar: Optional[str] = None
     rating: int
     comment: str
-    images: list[str]
+    images: list[str] = Field(default_factory=list)
     vendor_response: Optional[str] = None
     vendor_responded_at: Optional[datetime] = None
     helpful_count: int

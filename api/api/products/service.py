@@ -113,6 +113,8 @@ def _row_to_summary(row: dict) -> ProductSummaryResponse:
     return ProductSummaryResponse(
         id=str(row["id"]),
         name=row["name"],
+        average_rating=row.get("average_rating") or 0.0,
+        total_reviews=row.get("total_reviews") or 0,
         image_urls=list(row.get("image_urls") or []),
         category_id=str(row["category_id"]),
         vendor_id=str(row["vendor_id"]),

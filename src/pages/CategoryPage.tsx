@@ -223,6 +223,20 @@ export function CategoryPage() {
                               <Heart className={`h-4 w-4 ${isInWishlist(product.id) ? "fill-current" : ""}`} />
                             </button>
                           </div>
+                          {(product.average_rating ?? 0) > 0 && (
+                            <div className="flex items-center gap-1 text-xs">
+                              <div className="flex items-center text-amber-400">
+                                {[...Array(5)].map((_, i) => (
+                                  <span key={i}>
+                                    {i < Math.floor(product.average_rating ?? 0) ? "★" : "☆"}
+                                  </span>
+                                ))}
+                              </div>
+                              <span className="text-slate-600 dark:text-slate-400">
+                                {(product.average_rating ?? 0).toFixed(1)} ({product.total_reviews ?? 0})
+                              </span>
+                            </div>
+                          )}
                           <div className="flex items-baseline gap-1">
                             <span className="text-xl font-bold text-slate-900 dark:text-slate-100">
                               {formatINR(product.price_day)}

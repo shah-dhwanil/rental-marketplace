@@ -44,6 +44,8 @@ export const ProductSummarySchema = z.object({
   price_day: z.union([z.string(), z.number()]).transform((v) => Number(v)),
   is_active: z.boolean(),
   reserved_qty: z.number(),
+  average_rating: z.number().default(0),
+  total_reviews: z.number().default(0),
   created_at: z.string(),
 });
 
@@ -62,6 +64,8 @@ export const ProductSchema = z.object({
   security_deposit: z.union([z.string(), z.number()]).transform((v) => Number(v)),
   defect_charge: z.union([z.string(), z.number()]).transform((v) => Number(v)),
   is_active: z.boolean(),
+  average_rating: z.number().default(0),
+  total_reviews: z.number().default(0),
   created_at: z.string(),
   updated_at: z.string(),
 });

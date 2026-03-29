@@ -53,6 +53,16 @@ class DefectRepository:
                 images,
                 stripe_payment_intent_id,
             )
+            await conn.execute(
+                """
+                UPDATE orders
+                SET damage_amount = COALESCE(damage_amount, 0) + $1,
+                grand_total = grand_total + $1
+                WHERE id = $2
+            """,
+                amount,
+                order_id,
+            )
             logger.info("defect_charge_created", defect_id=row["id"], order_id=order_id)
             return _row_to_dict(row)
 

@@ -131,10 +131,12 @@ export function Home() {
                     <div className="flex items-center gap-1.5">
                       <div className="flex text-amber-400 dark:text-amber-500">
                         {[...Array(5)].map((_, i) => (
-                          <Star key={i} className={`h-3 w-3 ${i < 4 ? "fill-current" : "text-slate-200 dark:text-slate-700"}`} />
+                          <Star key={i} className={`h-3 w-3 ${i < Math.floor(item.average_rating || 0) ? "fill-current" : "text-slate-200 dark:text-slate-700"}`} />
                         ))}
                       </div>
-                      <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">(0 reviews)</span>
+                      <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">
+                        ({item.total_reviews || 0} {item.total_reviews === 1 ? 'review' : 'reviews'})
+                      </span>
                     </div>
 
                     <div className="pt-3 flex items-end justify-between border-t border-slate-100 dark:border-slate-800 mt-1">

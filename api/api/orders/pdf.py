@@ -19,14 +19,27 @@ from reportlab.platypus import (
     Table,
     TableStyle,
 )
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+
+# Register DejaVu Sans font for Unicode support (₹ symbol)
+try:
+    pdfmetrics.registerFont(TTFont('DejaVuSans', '/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf'))
+    pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'))
+    UNICODE_FONT = 'DejaVuSans'
+    UNICODE_FONT_BOLD = 'DejaVuSans-Bold'
+except Exception:
+    # Fallback to default font if DejaVu is not available
+    UNICODE_FONT = 'Helvetica'
+    UNICODE_FONT_BOLD = 'Helvetica-Bold'
 
 # ── Colours ────────────────────────────────────────────────────────────────────
 
-BRAND_BLUE = colors.HexColor("#2563eb")
-LIGHT_GREY = colors.HexColor("#f3f4f6")
-BORDER_GREY = colors.HexColor("#e5e7eb")
-TEXT_GREY = colors.HexColor("#6b7280")
-TEXT_DARK = colors.HexColor("#111827")
+BLACK = colors.black
+DARK_GREY = colors.HexColor("#333333")
+MEDIUM_GREY = colors.HexColor("#666666")
+LIGHT_GREY = colors.HexColor("#CCCCCC")
+TABLE_HEADER_GREY = colors.HexColor("#F5F5F5")
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -73,27 +86,20 @@ def _header_table(order: dict) -> Table:
     """Top header: brand on left, order meta on right."""
     styles = getSampleStyleSheet()
     brand = Paragraph(
-        "<font color='#2563eb'><b>Rental</b></font><font color='#9333ea'><b>Mkt</b></font>",
-        ParagraphStyle("brand", parent=styles["Normal"], fontSize=22, leading=26),
+        "<b>RentalMkt</b>",
+        ParagraphStyle("brand", parent=styles["Normal"], fontSize=20, leading=24, fontName=UNICODE_FONT_BOLD, textColor=BLACK),
     )
     order_no = Paragraph(
-        f"<b>Order #{str(order['id'])[:8].upper()}</b>",
-        ParagraphStyle("ordno", parent=styles["Normal"], fontSize=11, leading=14, alignment=2),
+        f"<b>Invoice No: {str(order['id'])[:8].upper()}</b>",
+        ParagraphStyle("ordno", parent=styles["Normal"], fontSize=10, leading=14, alignment=2, fontName=UNICODE_FONT_BOLD, textColor=BLACK),
     )
     created = Paragraph(
         f"Date: {_fmt_date(order.get('created_at', date.today()))}",
-        ParagraphStyle("meta", parent=styles["Normal"], fontSize=9, textColor=TEXT_GREY, alignment=2),
+        ParagraphStyle("meta", parent=styles["Normal"], fontSize=9, textColor=DARK_GREY, alignment=2, fontName=UNICODE_FONT),
     )
-    status_colour = {
-        "confirmed": "#16a34a",
-        "active": "#2563eb",
-        "completed": "#374151",
-        "cancelled": "#dc2626",
-        "pending_payment": "#d97706",
-    }.get(order.get("status", ""), "#374151")
     status_lbl = Paragraph(
-        f"<font color='{status_colour}'><b>{order.get('status', '').replace('_', ' ').title()}</b></font>",
-        ParagraphStyle("status", parent=styles["Normal"], fontSize=9, alignment=2),
+        f"Status: {order.get('status', '').replace('_', ' ').title()}",
+        ParagraphStyle("status", parent=styles["Normal"], fontSize=9, alignment=2, fontName=UNICODE_FONT, textColor=DARK_GREY),
     )
     tbl = Table(
         [[brand, [order_no, created, status_lbl]]],
@@ -101,7 +107,8 @@ def _header_table(order: dict) -> Table:
     )
     tbl.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+        ("LINEBELOW", (0, 0), (-1, -1), 2, BLACK),
     ]))
     return tbl
 
@@ -110,9 +117,9 @@ def _two_col_section(left_title: str, left_rows: list[tuple[str, str]],
                      right_title: str, right_rows: list[tuple[str, str]]) -> Table:
     """Two-column info box: customer / vendor or similar."""
     styles = getSampleStyleSheet()
-    label_style = ParagraphStyle("lbl", parent=styles["Normal"], fontSize=8, textColor=TEXT_GREY)
-    value_style = ParagraphStyle("val", parent=styles["Normal"], fontSize=9, textColor=TEXT_DARK)
-    title_style = ParagraphStyle("ttl", parent=styles["Normal"], fontSize=10, textColor=BRAND_BLUE)
+    label_style = ParagraphStyle("lbl", parent=styles["Normal"], fontSize=8, textColor=MEDIUM_GREY, fontName=UNICODE_FONT)
+    value_style = ParagraphStyle("val", parent=styles["Normal"], fontSize=9, textColor=BLACK, fontName=UNICODE_FONT)
+    title_style = ParagraphStyle("ttl", parent=styles["Normal"], fontSize=10, textColor=BLACK, fontName=UNICODE_FONT_BOLD)
 
     def _col(title: str, rows: list[tuple[str, str]]) -> list:
         items: list = [Paragraph(f"<b>{title}</b>", title_style), Spacer(1, 3)]
@@ -127,13 +134,12 @@ def _two_col_section(left_title: str, left_rows: list[tuple[str, str]],
     )
     tbl.setStyle(TableStyle([
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
-        ("BACKGROUND", (0, 0), (-1, -1), LIGHT_GREY),
-        ("ROUNDEDCORNERS", [4]),
+        ("BOX", (0, 0), (-1, -1), 1, LIGHT_GREY),
         ("TOPPADDING", (0, 0), (-1, -1), 10),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
         ("LEFTPADDING", (0, 0), (-1, -1), 10),
         ("RIGHTPADDING", (0, 0), (-1, -1), 10),
-        ("LINEAFTER", (0, 0), (0, -1), 0.5, BORDER_GREY),
+        ("LINEAFTER", (0, 0), (0, -1), 0.5, LIGHT_GREY),
     ]))
     return tbl
 
@@ -152,10 +158,15 @@ def _amount_table(order: dict) -> Table:
         ["CGST (9%)", _fmt_inr(order.get("cgst_amount"))],
         ["SGST (9%)", _fmt_inr(order.get("sgst_amount"))],
         ["Security Deposit (refundable)", _fmt_inr(order.get("security_deposit"))],
-        ["Grand Total", _fmt_inr(order.get("grand_total"))],
     ]
-    label_style = ParagraphStyle("lbl2", parent=styles["Normal"], fontSize=9)
-    val_style = ParagraphStyle("val2", parent=styles["Normal"], fontSize=9, alignment=2)
+    if float(order.get("damage_amount", 0)) > 0:
+        rows.append(["Damage Charge", _fmt_inr(order.get("damage_amount"))])
+    if float(order.get("defect_charge", 0)) > 0:
+        rows.append(["Defect Charge", _fmt_inr(order.get("defect_charge"))])
+    rows.append(["Total Amount", _fmt_inr(order.get("grand_total"))])
+    
+    label_style = ParagraphStyle("lbl2", parent=styles["Normal"], fontSize=9, fontName=UNICODE_FONT, textColor=BLACK)
+    val_style = ParagraphStyle("val2", parent=styles["Normal"], fontSize=9, alignment=2, fontName=UNICODE_FONT, textColor=BLACK)
     table_data = [
         [Paragraph(f"<b>{r[0]}</b>", label_style), Paragraph(f"<b>{r[1]}</b>", val_style)]
         if i == 0
@@ -164,12 +175,13 @@ def _amount_table(order: dict) -> Table:
     ]
     tbl = Table(table_data, colWidths=["70%", "30%"])
     tbl.setStyle(TableStyle([
-        ("BACKGROUND", (0, 0), (-1, 0), BRAND_BLUE),
-        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-        ("ROWBACKGROUNDS", (0, 1), (-1, -2), [colors.white, LIGHT_GREY]),
-        ("BACKGROUND", (0, -1), (-1, -1), TEXT_DARK),
-        ("TEXTCOLOR", (0, -1), (-1, -1), colors.white),
-        ("GRID", (0, 0), (-1, -1), 0.5, BORDER_GREY),
+        ("BACKGROUND", (0, 0), (-1, 0), TABLE_HEADER_GREY),
+        ("TEXTCOLOR", (0, 0), (-1, -1), BLACK),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -2), [colors.white, colors.white]),
+        ("BACKGROUND", (0, -1), (-1, -1), TABLE_HEADER_GREY),
+        ("FONTNAME", (0, -1), (-1, -1), UNICODE_FONT_BOLD),
+        ("GRID", (0, 0), (-1, -1), 0.5, LIGHT_GREY),
+        ("LINEABOVE", (0, -1), (-1, -1), 1.5, BLACK),
         ("TOPPADDING", (0, 0), (-1, -1), 6),
         ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
         ("LEFTPADDING", (0, 0), (-1, -1), 8),
@@ -186,33 +198,33 @@ def generate_invoice_pdf(order: dict[str, Any]) -> bytes:
     doc = _build_document(buffer, f"Invoice — {str(order['id'])[:8].upper()}")
     styles = getSampleStyleSheet()
     section_title = ParagraphStyle(
-        "sec", parent=styles["Heading2"], fontSize=11, textColor=TEXT_DARK, spaceBefore=12, spaceAfter=4
+        "sec", parent=styles["Heading2"], fontSize=11, textColor=BLACK, spaceBefore=12, spaceAfter=4, fontName=UNICODE_FONT_BOLD
     )
     note_style = ParagraphStyle(
-        "note", parent=styles["Normal"], fontSize=8, textColor=TEXT_GREY, spaceAfter=4
+        "note", parent=styles["Normal"], fontSize=8, textColor=MEDIUM_GREY, spaceAfter=4, fontName=UNICODE_FONT
     )
 
     story: list[Any] = [
         _header_table(order),
-        Spacer(1, 6 * mm),
-        Paragraph("<b>TEMPORARY INVOICE</b>", ParagraphStyle(
-            "inv_title", parent=styles["Normal"], fontSize=14, textColor=BRAND_BLUE, spaceAfter=2
+        Spacer(1, 8 * mm),
+        Paragraph("<b>TAX INVOICE</b>", ParagraphStyle(
+            "inv_title", parent=styles["Normal"], fontSize=14, textColor=BLACK, spaceAfter=2, fontName=UNICODE_FONT_BOLD, alignment=1
         )),
         Paragraph(
-            "This is a system-generated temporary invoice. A final invoice will be issued upon order completion.",
-            note_style,
+            "This is a system-generated invoice. A final invoice will be issued upon order completion.",
+            ParagraphStyle("subtitle", parent=styles["Normal"], fontSize=8, textColor=MEDIUM_GREY, spaceAfter=4, fontName=UNICODE_FONT, alignment=1),
         ),
-        Spacer(1, 4 * mm),
-        Paragraph("Parties", section_title),
+        Spacer(1, 6 * mm),
+        Paragraph("Billed To / Customer Details", section_title),
         _two_col_section(
-            "Customer",
+            "Customer Information",
             [
                 ("Name", order.get("customer_name", "—")),
                 ("Mobile", order.get("customer_mobile", "—")),
                 ("Email", order.get("customer_email", "—")),
                 ("Delivery Address", order.get("delivery_address_line", "—")),
             ],
-            "Vendor",
+            "Vendor Information",
             [
                 ("Name", order.get("vendor_name", "—")),
                 ("GST No.", order.get("vendor_gst", "—")),
@@ -238,12 +250,19 @@ def generate_invoice_pdf(order: dict[str, Any]) -> bytes:
             ],
         ),
         Spacer(1, 4 * mm),
-        Paragraph("Payment Summary", section_title),
+        Paragraph("Payment Details", section_title),
         _amount_table(order),
-        Spacer(1, 5 * mm),
+        Spacer(1, 6 * mm),
         Paragraph(
-            "Security deposit will be refunded within 5-7 business days after the device is returned and inspected.",
-            note_style,
+            "<b>Terms & Conditions:</b>",
+            ParagraphStyle("terms_title", parent=styles["Normal"], fontSize=9, textColor=BLACK, fontName=UNICODE_FONT_BOLD, spaceAfter=2),
+        ),
+        Paragraph(
+            "1. Security deposit will be refunded within 5-7 business days after the device is returned and inspected.<br/>"
+            "2. Late returns will incur additional charges at 1.5× the daily rate.<br/>"
+            "3. Equipment must be returned in good condition, subject to normal wear and tear.<br/>"
+            "4. This invoice is subject to the terms outlined in the rental agreement.",
+            ParagraphStyle("terms", parent=styles["Normal"], fontSize=8, textColor=MEDIUM_GREY, fontName=UNICODE_FONT, leading=12),
         ),
     ]
     doc.build(story)
@@ -255,10 +274,10 @@ def generate_contract_pdf(order: dict[str, Any]) -> bytes:
     buffer = io.BytesIO()
     doc = _build_document(buffer, f"Rental Contract — {str(order['id'])[:8].upper()}")
     styles = getSampleStyleSheet()
-    h1 = ParagraphStyle("h1c", parent=styles["Heading1"], fontSize=16, textColor=BRAND_BLUE, alignment=1)
-    h2 = ParagraphStyle("h2c", parent=styles["Heading2"], fontSize=11, textColor=TEXT_DARK, spaceBefore=10, spaceAfter=4)
-    body = ParagraphStyle("bodyc", parent=styles["Normal"], fontSize=9, leading=14, textColor=TEXT_DARK)
-    sig_style = ParagraphStyle("sig", parent=styles["Normal"], fontSize=9, textColor=TEXT_GREY)
+    h1 = ParagraphStyle("h1c", parent=styles["Heading1"], fontSize=16, textColor=BLACK, alignment=1, fontName=UNICODE_FONT_BOLD)
+    h2 = ParagraphStyle("h2c", parent=styles["Heading2"], fontSize=11, textColor=BLACK, spaceBefore=10, spaceAfter=4, fontName=UNICODE_FONT_BOLD)
+    body = ParagraphStyle("bodyc", parent=styles["Normal"], fontSize=9, leading=14, textColor=BLACK, fontName=UNICODE_FONT)
+    sig_style = ParagraphStyle("sig", parent=styles["Normal"], fontSize=9, textColor=DARK_GREY, fontName=UNICODE_FONT)
 
     start = _fmt_date(order.get("start_date"))
     end = _fmt_date(order.get("end_date"))
@@ -337,15 +356,15 @@ def generate_contract_pdf(order: dict[str, Any]) -> bytes:
 
     story: list[Any] = [
         _header_table(order),
-        Spacer(1, 6 * mm),
+        Spacer(1, 8 * mm),
         Paragraph("RENTAL AGREEMENT & CONTRACT", h1),
         Spacer(1, 2 * mm),
         Paragraph(
-            f"Order Reference: <b>#{str(order['id'])[:8].upper()}</b> &nbsp;|&nbsp; "
+            f"Contract Reference: <b>#{str(order['id'])[:8].upper()}</b> &nbsp;|&nbsp; "
             f"Date: <b>{_fmt_date(order.get('created_at', date.today()))}</b>",
-            ParagraphStyle("refline", parent=styles["Normal"], fontSize=9, textColor=TEXT_GREY, alignment=1),
+            ParagraphStyle("refline", parent=styles["Normal"], fontSize=9, textColor=MEDIUM_GREY, alignment=1, fontName=UNICODE_FONT),
         ),
-        Spacer(1, 5 * mm),
+        Spacer(1, 6 * mm),
     ]
 
     for title, text in clauses:
@@ -375,7 +394,7 @@ def generate_contract_pdf(order: dict[str, Any]) -> bytes:
         Spacer(1, 5 * mm),
         Paragraph(
             "This is a system-generated contract. Digital acceptance is recorded at the time of payment.",
-            ParagraphStyle("footer", parent=styles["Normal"], fontSize=8, textColor=TEXT_GREY, alignment=1),
+            ParagraphStyle("footer", parent=styles["Normal"], fontSize=8, textColor=MEDIUM_GREY, alignment=1, fontName=UNICODE_FONT),
         ),
     ]
 

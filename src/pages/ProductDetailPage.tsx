@@ -165,7 +165,11 @@ export function ProductDetailPage() {
                   </Badge>
                   <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-1">{product.name}</h1>
                   <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                    <div className="flex items-center gap-0.5 text-amber-400" aria-label={`Rated ${avgRating.toFixed(1)} out of 5`}>
+                    <a 
+                      href="#reviews-section" 
+                      className="flex items-center gap-0.5 text-amber-400 hover:text-amber-500 transition-colors cursor-pointer"
+                      aria-label={`Rated ${avgRating.toFixed(1)} out of 5`}
+                    >
                       {Array.from({ length: fullStars }).map((_, i) => (
                         <Star key={`filled-${i}`} className="h-4 w-4 fill-current" />
                       ))}
@@ -173,9 +177,13 @@ export function ProductDetailPage() {
                       {Array.from({ length: emptyStars }).map((_, i) => (
                         <Star key={`empty-${i}`} className="h-4 w-4" />
                       ))}
-                    </div>
-                    <span className="font-medium text-slate-700 dark:text-slate-300">{avgRating.toFixed(1)}</span>
-                    <span>({totalReviews} review{totalReviews !== 1 ? "s" : ""})</span>
+                    </a>
+                    <a href="#reviews-section" className="font-medium text-slate-700 dark:text-slate-300 hover:text-primary transition-colors">
+                      {avgRating.toFixed(1)}
+                    </a>
+                    <a href="#reviews-section" className="hover:text-primary transition-colors">
+                      ({totalReviews} review{totalReviews !== 1 ? "s" : ""})
+                    </a>
                     {product.reserved_qty > 0 && (
                       <Badge variant="outline" className="ml-2">
                         {product.reserved_qty} units rented
@@ -490,14 +498,60 @@ export function ProductDetailPage() {
           </div>
         </div>
 
-        {/* Reviews placeholder */}
-        <Card className="mt-10 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-          <CardHeader>
-            <CardTitle>Customer Reviews</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {reviews.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">No reviews yet. Be the first to review!</p>
+        {/* Reviews section */}
+        <div id="reviews-section" className="scroll-mt-8">
+          <Card className="mt-10 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Star className="h-5 w-5 text-amber-400 fill-amber-400" />
+                Customer Reviews & Ratings
+              </CardTitle>
+              {totalReviews > 0 && (
+                <div className="mt-4 flex items-center gap-8">
+                  <div className="text-center">
+                    <div className="text-4xl font-bold text-slate-900 dark:text-slate-100">
+                      {avgRating.toFixed(1)}
+                    </div>
+                    <div className="flex items-center gap-0.5 text-amber-400 mt-1">
+                      {Array.from({ length: fullStars }).map((_, i) => (
+                        <Star key={`review-filled-${i}`} className="h-4 w-4 fill-current" />
+                      ))}
+                      {hasHalfStar && <Star key="review-half" className="h-4 w-4 fill-current opacity-60" />}
+                      {Array.from({ length: emptyStars }).map((_, i) => (
+                        <Star key={`review-empty-${i}`} className="h-4 w-4" />
+                      ))}
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                      {totalReviews} review{totalReviews !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  {reviewStats?.rating_distribution && (
+                    <div className="flex-1 space-y-1.5">
+                      {[5, 4, 3, 2, 1].map((rating) => {
+                        const count = reviewStats.rating_distribution[rating] || 0;
+                        const percentage = totalReviews > 0 ? (count / totalReviews) * 100 : 0;
+                        return (
+                          <div key={rating} className="flex items-center gap-2 text-sm">
+                            <span className="text-slate-600 dark:text-slate-400 w-8">{rating}★</span>
+                            <div className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-amber-400 transition-all duration-300"
+                                style={{ width: `${percentage}%` }}
+                              />
+                            </div>
+                            <span className="text-slate-500 dark:text-slate-400 w-8 text-right">{count}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              {console.log("Reviews data:", reviews)}
+              {reviews.length === 0 ? (
+                <p className="text-sm text-slate-500 dark:text-slate-400">No reviews yet. Be the first to review!</p>
             ) : (
               <div className="space-y-4">
                 {reviews.map((review) => (
@@ -543,6 +597,7 @@ export function ProductDetailPage() {
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
 
       {/* ── Contact Modal ──────────────────────────────────────────────────── */}

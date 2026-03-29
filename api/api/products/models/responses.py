@@ -22,6 +22,8 @@ class ProductResponse(BaseModel):
     security_deposit: Decimal
     defect_charge: Decimal
     is_active: bool
+    average_rating: Optional[float] = 0.0
+    total_reviews: Optional[int] = 0
     created_at: datetime
     updated_at: datetime
 
@@ -35,6 +37,8 @@ class ProductSummaryResponse(BaseModel):
     price_day: Decimal
     is_active: bool
     reserved_qty: int
+    average_rating: Optional[float] = 0.0
+    total_reviews: Optional[int] = 0
     created_at: datetime
 
 
