@@ -10,9 +10,9 @@ from api.payments.exceptions import (
     PaymentMethodAccessDeniedException,
     PaymentMethodNotFoundException,
 )
-from api.payments.models.requests import AddPaymentMethodRequest
-from api.payments.models.responses import PaymentMethodDetailResponse, PaymentMethodResponse
-from api.payments.repository import PaymentMethodRepository
+from api.models.payment import AddPaymentMethodRequest
+from api.models.payment import PaymentMethodDetailResponse, PaymentMethodResponse
+from api.repository.payment import PaymentMethodRepository
 
 logger = structlog.get_logger(__name__)
 

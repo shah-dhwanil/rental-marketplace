@@ -9,7 +9,7 @@ from fastapi import APIRouter, File, Query, UploadFile, status
 from api.models.pagination import PaginatedResponse
 from api.users.dependencies import AdminDep, CurrentUserDep, TempTokenDep, UserServiceDep
 from api.users.exceptions import InsufficientPermissionException
-from api.users.models.requests import (
+from api.models.user import (
     AdminCreateRequest,
     DeliveryPartnerStep2Request,
     DeliveryPartnerStep3Request,
@@ -23,7 +23,7 @@ from api.users.models.requests import (
     VendorStep2Request,
     VendorStep3Request,
 )
-from api.users.models.responses import (
+from api.models.user import (
     AdminUserDetailResponse,
     MeIdentityResponse,
     OTPResponse,

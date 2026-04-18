@@ -7,9 +7,9 @@ from fastapi import Depends
 from api.cloudinary import get_cloudinary_client
 from api.database import get_db_pool
 from api.embedding import get_embedding_service
-from api.categories.repository import CategoryRepository
-from api.products.repository import ProductRepository
-from api.products.service import ProductService
+from api.repository.category import CategoryRepository
+from api.repository.product import ProductRepository
+from api.service.product import ProductService
 from api.users.dependencies import CurrentUserDep
 from api.users.exceptions import InsufficientPermissionException
 

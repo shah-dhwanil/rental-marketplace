@@ -4,8 +4,8 @@ from uuid import UUID
 import structlog
 
 from api.exceptions.app import AppException, UnkownAppException
-from api.wishlists.models.responses import WishlistIdsResponse, WishlistItemResponse, WishlistToggleResponse
-from api.wishlists.repository import WishlistRepository
+from api.models.wishlist import WishlistIdsResponse, WishlistItemResponse, WishlistToggleResponse
+from api.repository.wishlist import WishlistRepository
 
 logger = structlog.get_logger(__name__)
 

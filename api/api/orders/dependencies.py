@@ -2,11 +2,11 @@
 from typing import Annotated
 from fastapi import Depends
 from api.database import get_db_pool
-from api.orders.repository import OrderRepository
-from api.orders.service import OrderService
-from api.products.repository import ProductRepository
-from api.addresses.repository import AddressRepository
-from api.promos.repository import PromoRepository
+from api.repository.order import OrderRepository
+from api.service.order import OrderService
+from api.repository.product import ProductRepository
+from api.repository.address import AddressRepository
+from api.repository.promo import PromoRepository
 from api.settings import get_settings
 
 

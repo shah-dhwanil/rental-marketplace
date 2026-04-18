@@ -5,8 +5,8 @@ from fastapi import APIRouter, Query, Response, status
 
 from api.models.pagination import PaginatedResponse
 from api.orders.dependencies import OrderServiceDep
-from api.orders.models.requests import CreateOrderRequest, UpdateOrderStatusRequest
-from api.orders.models.responses import CreateOrderResponse, OrderResponse
+from api.models.order import CreateOrderRequest, UpdateOrderStatusRequest
+from api.models.order import CreateOrderResponse, OrderResponse
 from api.users.dependencies import AdminDep, CurrentUserDep
 from api.exceptions.app import AppException, ErrorTypes
 

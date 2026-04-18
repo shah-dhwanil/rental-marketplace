@@ -2,8 +2,8 @@
 from typing import Annotated
 from fastapi import Depends
 from api.database import get_db_pool
-from api.wishlists.repository import WishlistRepository
-from api.wishlists.service import WishlistService
+from api.repository.wishlist import WishlistRepository
+from api.service.wishlist import WishlistService
 
 
 def get_wishlist_repository() -> WishlistRepository:

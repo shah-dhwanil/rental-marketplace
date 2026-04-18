@@ -5,7 +5,7 @@ from uuid import UUID
 from fastapi import APIRouter, status
 
 from api.defects.dependencies import DefectServiceDep
-from api.defects.models.responses import (
+from api.models.defect import (
     DefectChargeResponse,
     DefectChargeListResponse,
 )
@@ -84,7 +84,7 @@ async def update_defect_status(
     service: DefectServiceDep,
 ):
     """Update the status of a defect charge (paid, disputed, waived)."""
-    from api.defects.models.requests import UpdateDefectStatusRequest
+    from api.models.defect import UpdateDefectStatusRequest
     
     request = UpdateDefectStatusRequest(status=status)
     return await service.update_defect_status(defect_id, request)

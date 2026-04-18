@@ -3,8 +3,8 @@ from fastapi import APIRouter, Query, status
 from api.models.pagination import PaginatedResponse
 from api.users.dependencies import AdminDep, CurrentUserDep
 from api.promos.dependencies import PromoServiceDep
-from api.promos.models.requests import CreatePromoRequest, UpdatePromoRequest, ValidatePromoRequest
-from api.promos.models.responses import PromoResponse, PromoValidationResponse
+from api.models.promo import CreatePromoRequest, UpdatePromoRequest, ValidatePromoRequest
+from api.models.promo import PromoResponse, PromoValidationResponse
 from api.exceptions.app import AppException, ErrorTypes
 
 router = APIRouter(prefix="/api/v1/promos", tags=["Promo Codes"])

@@ -7,14 +7,14 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Optional
 from uuid import UUID
 
-from api.products.repository import ProductRepository
+from api.repository.product import ProductRepository
 import structlog
 
 from api.cloudinary import CloudinaryClient
 from api.embedding import EmbeddingService
 from api.exceptions.app import AppException, ErrorTypes, UnkownAppException
 from api.models.pagination import PaginatedResponse
-from api.categories.repository import CategoryRepository
+from api.repository.category import CategoryRepository
 from api.products.exceptions import (
     DeviceNotFoundException,
     ProductImageLimitException,
@@ -22,14 +22,14 @@ from api.products.exceptions import (
     ProductNotFoundException,
     ProductOwnershipException,
 )
-from api.products.models.requests import (
+from api.models.product import (
     CalculatePriceRequest,
     CreateDeviceRequest,
     CreateProductRequest,
     UpdateDeviceRequest,
     UpdateProductRequest,
 )
-from api.products.models.responses import (
+from api.models.product import (
     DeviceResponse,
     PriceCalculationResponse,
     ProductResponse,

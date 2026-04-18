@@ -1,4 +1,4 @@
 """Defects package."""
-from api.defects.router import router
+from api.controller.defect import router
 
 __all__ = ["router"]

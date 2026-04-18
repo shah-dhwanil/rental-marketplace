@@ -6,8 +6,8 @@ from fastapi import Depends
 
 from api.cloudinary import get_cloudinary_client
 from api.database import get_db_pool
-from api.categories.repository import CategoryRepository
-from api.categories.service import CategoryService
+from api.repository.category import CategoryRepository
+from api.service.category import CategoryService
 
 
 def get_category_repository() -> CategoryRepository:

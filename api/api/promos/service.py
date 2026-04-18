@@ -14,9 +14,9 @@ from api.promos.exceptions import (
     PromoInvalidException,
     PromoNotFoundException,
 )
-from api.promos.models.requests import CreatePromoRequest, UpdatePromoRequest, ValidatePromoRequest
-from api.promos.models.responses import PromoResponse, PromoValidationResponse
-from api.promos.repository import PromoRepository
+from api.models.promo import CreatePromoRequest, UpdatePromoRequest, ValidatePromoRequest
+from api.models.promo import PromoResponse, PromoValidationResponse
+from api.repository.promo import PromoRepository
 
 logger = structlog.get_logger(__name__)
 

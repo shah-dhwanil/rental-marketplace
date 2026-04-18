@@ -4,8 +4,8 @@ from typing import Annotated
 from fastapi import Depends
 
 from api.database import get_db_pool
-from api.reviews.repository import ReviewRepository
-from api.reviews.service import ReviewService
+from api.repository.review import ReviewRepository
+from api.service.review import ReviewService
 
 
 def get_review_repository() -> ReviewRepository:

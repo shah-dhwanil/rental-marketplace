@@ -13,16 +13,16 @@ from api.lifespan import lifespan
 from api.middleware import ContextMiddleware, LoggingMiddleware, RequestIDMiddleware
 from api.models.errors import HTTPException
 from api.settings import get_settings
-from api.users.router import router as users_router
-from api.categories.router import router as categories_router
-from api.products.router import router as products_router
-from api.addresses.router import router as addresses_router
-from api.payments.router import router as payments_router
-from api.promos.router import router as promos_router
-from api.wishlists.router import router as wishlists_router
-from api.orders.router import router as orders_router
-from api.reviews.router import router as reviews_router
-from api.defects.router import router as defects_router
+from api.controller.user import router as users_router
+from api.controller.category import router as categories_router
+from api.controller.product import router as products_router
+from api.controller.address import router as addresses_router
+from api.controller.payment import router as payments_router
+from api.controller.promo import router as promos_router
+from api.controller.wishlist import router as wishlists_router
+from api.controller.order import router as orders_router
+from api.controller.review import router as reviews_router
+from api.controller.defect import router as defects_router
 
 # Load settings
 settings = get_settings()

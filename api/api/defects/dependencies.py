@@ -4,8 +4,8 @@ from typing import Annotated
 from fastapi import Depends
 
 from api.database import get_db_pool, DatabasePool
-from api.defects.repository import DefectRepository
-from api.defects.service import DefectService
+from api.repository.defect import DefectRepository
+from api.service.defect import DefectService
 
 
 def get_defect_repository() -> DefectRepository:

@@ -8,18 +8,18 @@ import math
 import structlog
 
 from api.exceptions.app import AppException, ErrorTypes
-from api.reviews.models.requests import (
+from api.models.review import (
     CreateReviewRequest,
     UpdateVendorResponseRequest,
     GetReviewsQueryParams,
 )
-from api.reviews.models.responses import (
+from api.models.review import (
     ReviewResponse,
     ReviewStatsResponse,
     ReviewListResponse,
     ReviewCreatedResponse,
 )
-from api.reviews.repository import ReviewRepository
+from api.repository.review import ReviewRepository
 
 logger = structlog.get_logger(__name__)
 

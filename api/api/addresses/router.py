@@ -2,8 +2,8 @@
 from fastapi import APIRouter, status
 from api.users.dependencies import CurrentUserDep
 from api.addresses.dependencies import AddressServiceDep
-from api.addresses.models.requests import CreateAddressRequest, UpdateAddressRequest
-from api.addresses.models.responses import AddressResponse
+from api.models.address import CreateAddressRequest, UpdateAddressRequest
+from api.models.address import AddressResponse
 from api.exceptions.app import AppException, ErrorTypes
 
 router = APIRouter(prefix="/api/v1/addresses", tags=["Addresses"])

@@ -3,8 +3,8 @@ from typing import Annotated
 from fastapi import Depends
 from api.database import get_db_pool
 from api.settings import get_settings
-from api.payments.repository import PaymentMethodRepository
-from api.payments.service import PaymentMethodService
+from api.repository.payment import PaymentMethodRepository
+from api.service.payment import PaymentMethodService
 
 
 def get_payment_repository() -> PaymentMethodRepository:

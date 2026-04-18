@@ -1,9 +1,9 @@
 """Defect models package."""
-from api.defects.models.requests import (
+from api.models.defect import (
     CreateDefectChargeRequest,
     UpdateDefectStatusRequest,
 )
-from api.defects.models.responses import (
+from api.models.defect import (
     DefectChargeResponse,
     DefectChargeCreatedResponse,
     DefectChargeListResponse,

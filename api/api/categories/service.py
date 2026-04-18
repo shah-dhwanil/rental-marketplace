@@ -14,9 +14,9 @@ from api.categories.exceptions import (
     CategoryImageUploadException,
     CategoryNotFoundException,
 )
-from api.categories.models.requests import CreateCategoryRequest, UpdateCategoryRequest
-from api.categories.models.responses import CategoryDetailResponse, CategoryResponse
-from api.categories.repository import CategoryRepository
+from api.models.category import CreateCategoryRequest, UpdateCategoryRequest
+from api.models.category import CategoryDetailResponse, CategoryResponse
+from api.repository.category import CategoryRepository
 
 logger = structlog.get_logger(__name__)
 

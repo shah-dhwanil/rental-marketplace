@@ -13,8 +13,8 @@ from api.cloudinary import get_cloudinary_client
 from api.database import get_db_pool
 from api.jwt import decode_token
 from api.users.exceptions import InsufficientPermissionException, InvalidCredentialsException
-from api.users.repository import UserRepository
-from api.users.service import UserService
+from api.repository.user import UserRepository
+from api.service.user import UserService
 
 logger = structlog.get_logger(__name__)
 

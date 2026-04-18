@@ -7,8 +7,8 @@ from fastapi import APIRouter, File, Query, UploadFile, status
 from api.models.pagination import PaginatedResponse
 from api.users.dependencies import AdminDep, CurrentUserDep
 from api.categories.dependencies import CategoryServiceDep
-from api.categories.models.requests import CreateCategoryRequest, UpdateCategoryRequest
-from api.categories.models.responses import CategoryDetailResponse, CategoryResponse
+from api.models.category import CreateCategoryRequest, UpdateCategoryRequest
+from api.models.category import CategoryDetailResponse, CategoryResponse
 
 router = APIRouter(prefix="/api/v1/categories", tags=["Categories"])
 

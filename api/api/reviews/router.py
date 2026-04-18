@@ -5,12 +5,12 @@ from uuid import UUID
 from fastapi import APIRouter, Query, status
 
 from api.reviews.dependencies import ReviewServiceDep
-from api.reviews.models.requests import (
+from api.models.review import (
     CreateReviewRequest,
     UpdateVendorResponseRequest,
     GetReviewsQueryParams,
 )
-from api.reviews.models.responses import (
+from api.models.review import (
     ReviewResponse,
     ReviewStatsResponse,
     ReviewListResponse,

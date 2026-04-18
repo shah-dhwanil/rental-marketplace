@@ -1,10 +1,10 @@
 """Review models package."""
-from api.reviews.models.requests import (
+from api.models.review import (
     CreateReviewRequest,
     UpdateVendorResponseRequest,
     GetReviewsQueryParams,
 )
-from api.reviews.models.responses import (
+from api.models.review import (
     ReviewResponse,
     ReviewStatsResponse,
     ReviewListResponse,

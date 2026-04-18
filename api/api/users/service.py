@@ -29,7 +29,7 @@ from api.users.exceptions import (
     UserInactiveException,
     UserNotFoundException,
 )
-from api.users.models.requests import (
+from api.models.user import (
     AdminCreateRequest,
     DeliveryPartnerStep2Request,
     DeliveryPartnerStep3Request,
@@ -39,7 +39,7 @@ from api.users.models.requests import (
     VendorStep2Request,
     VendorStep3Request,
 )
-from api.users.models.responses import (
+from api.models.user import (
     AdminProfileResponse,
     AdminUserDetailResponse,
     CustomerProfileResponse,
@@ -50,7 +50,7 @@ from api.users.models.responses import (
     UserSummaryResponse,
     VendorProfileResponse,
 )
-from api.users.repository import UserRepository
+from api.repository.user import UserRepository
 from api.exceptions.app import AppException, UnkownAppException
 
 logger = structlog.get_logger(__name__)

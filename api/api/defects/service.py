@@ -9,13 +9,13 @@ import stripe
 import structlog
 
 from api.exceptions.app import AppException, ErrorTypes
-from api.defects.models.requests import CreateDefectChargeRequest, UpdateDefectStatusRequest
-from api.defects.models.responses import (
+from api.models.defect import CreateDefectChargeRequest, UpdateDefectStatusRequest
+from api.models.defect import (
     DefectChargeResponse,
     DefectChargeCreatedResponse,
     DefectChargeListResponse,
 )
-from api.defects.repository import DefectRepository
+from api.repository.defect import DefectRepository
 from api.settings import get_settings
 
 logger = structlog.get_logger(__name__)

@@ -2,8 +2,8 @@
 from typing import Annotated
 from fastapi import Depends
 from api.database import get_db_pool
-from api.promos.repository import PromoRepository
-from api.promos.service import PromoService
+from api.repository.promo import PromoRepository
+from api.service.promo import PromoService
 
 
 def get_promo_repository() -> PromoRepository:

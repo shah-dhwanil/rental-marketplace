@@ -6,9 +6,9 @@ import structlog
 
 from api.exceptions.app import UnkownAppException, AppException
 from api.addresses.exceptions import AddressNotFoundException, AddressAccessDeniedException
-from api.addresses.models.requests import CreateAddressRequest, UpdateAddressRequest
-from api.addresses.models.responses import AddressResponse
-from api.addresses.repository import AddressRepository
+from api.models.address import CreateAddressRequest, UpdateAddressRequest
+from api.models.address import AddressResponse
+from api.repository.address import AddressRepository
 
 logger = structlog.get_logger(__name__)
 

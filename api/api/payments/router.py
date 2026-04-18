@@ -2,8 +2,8 @@
 from fastapi import APIRouter, status
 from api.users.dependencies import CurrentUserDep
 from api.payments.dependencies import PaymentServiceDep
-from api.payments.models.requests import AddPaymentMethodRequest
-from api.payments.models.responses import PaymentMethodDetailResponse, PaymentMethodResponse
+from api.models.payment import AddPaymentMethodRequest
+from api.models.payment import PaymentMethodDetailResponse, PaymentMethodResponse
 from api.exceptions.app import AppException, ErrorTypes
 
 router = APIRouter(prefix="/api/v1/payment-methods", tags=["Payment Methods"])

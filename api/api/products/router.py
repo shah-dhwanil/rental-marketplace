@@ -7,14 +7,14 @@ from fastapi import APIRouter, File, Query, UploadFile, status
 
 from api.models.pagination import PaginatedResponse
 from api.products.dependencies import ProductServiceDep, VendorDep, VendorOrAdminDep
-from api.products.models.requests import (
+from api.models.product import (
     CalculatePriceRequest,
     CreateDeviceRequest,
     CreateProductRequest,
     UpdateDeviceRequest,
     UpdateProductRequest,
 )
-from api.products.models.responses import (
+from api.models.product import (
     DeviceResponse,
     PriceCalculationResponse,
     ProductResponse,

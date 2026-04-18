@@ -2,8 +2,8 @@
 from typing import Annotated
 from fastapi import Depends
 from api.database import get_db_pool
-from api.addresses.repository import AddressRepository
-from api.addresses.service import AddressService
+from api.repository.address import AddressRepository
+from api.service.address import AddressService
 
 
 def get_address_repository() -> AddressRepository:

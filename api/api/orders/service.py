@@ -21,12 +21,12 @@ from api.orders.exceptions import (
     OrderNotFoundException,
     PaymentVerificationException,
 )
-from api.orders.models.requests import CreateOrderRequest, UpdateOrderStatusRequest
-from api.orders.models.responses import CreateOrderResponse, OrderResponse
-from api.orders.repository import OrderRepository
-from api.promos.repository import PromoRepository
-from api.products.repository import ProductRepository
-from api.addresses.repository import AddressRepository
+from api.models.order import CreateOrderRequest, UpdateOrderStatusRequest
+from api.models.order import CreateOrderResponse, OrderResponse
+from api.repository.order import OrderRepository
+from api.repository.promo import PromoRepository
+from api.repository.product import ProductRepository
+from api.repository.address import AddressRepository
 
 logger = structlog.get_logger(__name__)
 
@@ -339,9 +339,9 @@ class OrderService:
             if data.status == "completed" and data.defect_charge and caller_role == "vendor":
                 try:
                     # Import here to avoid circular dependency
-                    from api.defects.repository import DefectRepository
-                    from api.defects.service import DefectService
-                    from api.defects.models.requests import CreateDefectChargeRequest
+                    from api.repository.defect import DefectRepository
+                    from api.service.defect import DefectService
+                    from api.models.defect import CreateDefectChargeRequest
                     from api.database import get_db_pool
                     
                     db_pool = get_db_pool()
