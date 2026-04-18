@@ -4,7 +4,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Query, status
 
-from api.reviews.dependencies import ReviewServiceDep
+from api.dependencies.review import ReviewServiceDep
 from api.models.review import (
     CreateReviewRequest,
     UpdateVendorResponseRequest,
@@ -16,7 +16,7 @@ from api.models.review import (
     ReviewListResponse,
     ReviewCreatedResponse,
 )
-from api.users.dependencies import CurrentUserDep
+from api.dependencies.user import CurrentUserDep
 from api.exceptions.app import AppException, ErrorTypes
 
 router = APIRouter(prefix="/api/v1/reviews", tags=["Reviews"])

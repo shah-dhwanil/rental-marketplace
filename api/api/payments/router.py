@@ -1,7 +1,7 @@
 """Stored payment methods router."""
 from fastapi import APIRouter, status
-from api.users.dependencies import CurrentUserDep
-from api.payments.dependencies import PaymentServiceDep
+from api.dependencies.user import CurrentUserDep
+from api.dependencies.payment import PaymentServiceDep
 from api.models.payment import AddPaymentMethodRequest
 from api.models.payment import PaymentMethodDetailResponse, PaymentMethodResponse
 from api.exceptions.app import AppException, ErrorTypes

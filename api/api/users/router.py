@@ -7,8 +7,8 @@ from typing import Optional, Union
 from fastapi import APIRouter, File, Query, UploadFile, status
 
 from api.models.pagination import PaginatedResponse
-from api.users.dependencies import AdminDep, CurrentUserDep, TempTokenDep, UserServiceDep
-from api.users.exceptions import InsufficientPermissionException
+from api.dependencies.user import AdminDep, CurrentUserDep, TempTokenDep, UserServiceDep
+from api.exceptions.user import InsufficientPermissionException
 from api.models.user import (
     AdminCreateRequest,
     DeliveryPartnerStep2Request,

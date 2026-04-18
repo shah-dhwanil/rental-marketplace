@@ -1,7 +1,7 @@
 """Wishlists router."""
 from fastapi import APIRouter, status
-from api.users.dependencies import CurrentUserDep
-from api.wishlists.dependencies import WishlistServiceDep
+from api.dependencies.user import CurrentUserDep
+from api.dependencies.wishlist import WishlistServiceDep
 from api.models.wishlist import WishlistIdsResponse, WishlistItemResponse, WishlistToggleResponse
 from api.exceptions.app import AppException, ErrorTypes
 

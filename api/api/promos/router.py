@@ -1,8 +1,8 @@
 """Promo codes router."""
 from fastapi import APIRouter, Query, status
 from api.models.pagination import PaginatedResponse
-from api.users.dependencies import AdminDep, CurrentUserDep
-from api.promos.dependencies import PromoServiceDep
+from api.dependencies.user import AdminDep, CurrentUserDep
+from api.dependencies.promo import PromoServiceDep
 from api.models.promo import CreatePromoRequest, UpdatePromoRequest, ValidatePromoRequest
 from api.models.promo import PromoResponse, PromoValidationResponse
 from api.exceptions.app import AppException, ErrorTypes

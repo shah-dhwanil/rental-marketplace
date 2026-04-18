@@ -5,7 +5,7 @@ from uuid import UUID
 import structlog
 
 from api.exceptions.app import UnkownAppException, AppException
-from api.addresses.exceptions import AddressNotFoundException, AddressAccessDeniedException
+from api.exceptions.address import AddressNotFoundException, AddressAccessDeniedException
 from api.models.address import CreateAddressRequest, UpdateAddressRequest
 from api.models.address import AddressResponse
 from api.repository.address import AddressRepository

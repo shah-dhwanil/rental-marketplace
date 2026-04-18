@@ -8,7 +8,7 @@ import structlog
 
 from api.exceptions.app import AppException, UnkownAppException
 from api.models.pagination import PaginatedResponse
-from api.promos.exceptions import (
+from api.exceptions.promo import (
     PromoAccessDeniedException,
     PromoAlreadyExistsException,
     PromoInvalidException,

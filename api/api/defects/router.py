@@ -4,12 +4,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, status
 
-from api.defects.dependencies import DefectServiceDep
+from api.dependencies.defect import DefectServiceDep
 from api.models.defect import (
     DefectChargeResponse,
     DefectChargeListResponse,
 )
-from api.users.dependencies import CurrentUserDep
+from api.dependencies.user import CurrentUserDep
 from api.exceptions.app import AppException, ErrorTypes
 
 router = APIRouter(prefix="/api/v1/defects", tags=["Defects"])

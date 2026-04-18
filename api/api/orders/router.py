@@ -4,10 +4,10 @@ from typing import Optional
 from fastapi import APIRouter, Query, Response, status
 
 from api.models.pagination import PaginatedResponse
-from api.orders.dependencies import OrderServiceDep
+from api.dependencies.order import OrderServiceDep
 from api.models.order import CreateOrderRequest, UpdateOrderStatusRequest
 from api.models.order import CreateOrderResponse, OrderResponse
-from api.users.dependencies import AdminDep, CurrentUserDep
+from api.dependencies.user import AdminDep, CurrentUserDep
 from api.exceptions.app import AppException, ErrorTypes
 
 router = APIRouter(prefix="/api/v1/orders", tags=["Orders"])

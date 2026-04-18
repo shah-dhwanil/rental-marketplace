@@ -13,7 +13,7 @@ import structlog
 
 from api.exceptions.app import AppException, ErrorTypes, UnkownAppException
 from api.models.pagination import PaginatedResponse
-from api.orders.exceptions import (
+from api.exceptions.order import (
     NoDeviceAvailableException,
     OrderAccessDeniedException,
     OrderAlreadyConfirmedException,

@@ -6,7 +6,7 @@ from typing import Optional
 from fastapi import APIRouter, File, Query, UploadFile, status
 
 from api.models.pagination import PaginatedResponse
-from api.products.dependencies import ProductServiceDep, VendorDep, VendorOrAdminDep
+from api.dependencies.product import ProductServiceDep, VendorDep, VendorOrAdminDep
 from api.models.product import (
     CalculatePriceRequest,
     CreateDeviceRequest,

@@ -19,7 +19,7 @@ from api.cloudinary import CloudinaryClient
 from api.jwt import create_access_token, create_refresh_token, create_temp_token, decode_token
 from api.models.pagination import PaginatedResponse
 from api.settings import get_settings
-from api.users.exceptions import (
+from api.exceptions.user import (
     CloudinaryUploadException,
     InvalidCredentialsException,
     OTPAlreadyUsedException,
@@ -426,7 +426,7 @@ class UserService:
     ) -> str:
         try:
             if content_type not in _ALLOWED_PHOTO_TYPES:
-                from api.users.exceptions import OTPInvalidException as _
+                from api.exceptions.user import OTPInvalidException as _
                 from api.exceptions.app import AppException, ErrorTypes
                 raise AppException(
                     ErrorTypes.InputValidationError,

@@ -1,7 +1,7 @@
 """Addresses router."""
 from fastapi import APIRouter, status
-from api.users.dependencies import CurrentUserDep
-from api.addresses.dependencies import AddressServiceDep
+from api.dependencies.user import CurrentUserDep
+from api.dependencies.address import AddressServiceDep
 from api.models.address import CreateAddressRequest, UpdateAddressRequest
 from api.models.address import AddressResponse
 from api.exceptions.app import AppException, ErrorTypes

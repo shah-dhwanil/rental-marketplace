@@ -5,7 +5,7 @@ import structlog
 
 from api.crypto import encrypt_dict, decrypt_dict
 from api.exceptions.app import AppException, UnkownAppException
-from api.payments.exceptions import (
+from api.exceptions.payment import (
     PaymentDecryptionException,
     PaymentMethodAccessDeniedException,
     PaymentMethodNotFoundException,

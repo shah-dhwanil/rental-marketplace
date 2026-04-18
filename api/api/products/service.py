@@ -15,7 +15,7 @@ from api.embedding import EmbeddingService
 from api.exceptions.app import AppException, ErrorTypes, UnkownAppException
 from api.models.pagination import PaginatedResponse
 from api.repository.category import CategoryRepository
-from api.products.exceptions import (
+from api.exceptions.product import (
     DeviceNotFoundException,
     ProductImageLimitException,
     ProductImageUploadException,

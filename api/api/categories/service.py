@@ -9,7 +9,7 @@ import structlog
 from api.cloudinary import CloudinaryClient
 from api.exceptions.app import AppException, ErrorTypes, UnkownAppException
 from api.models.pagination import PaginatedResponse
-from api.categories.exceptions import (
+from api.exceptions.category import (
     CategoryAlreadyExistsException,
     CategoryImageUploadException,
     CategoryNotFoundException,
