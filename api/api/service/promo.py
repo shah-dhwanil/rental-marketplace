@@ -1,3 +1,3 @@
-from api.service.promo import PromoService
+from api.promos.service import PromoService
 
 __all__ = ["PromoService"]

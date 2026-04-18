@@ -1,3 +1,3 @@
-from api.controller.user import router
+from api.users.router import router
 
 __all__ = ["router"]

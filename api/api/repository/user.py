@@ -1,3 +1,3 @@
-from api.repository.user import UserRepository
+from api.users.repository import UserRepository
 
 __all__ = ["UserRepository"]

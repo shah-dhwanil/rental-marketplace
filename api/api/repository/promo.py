@@ -1,3 +1,3 @@
-from api.repository.promo import PromoRepository
+from api.promos.repository import PromoRepository
 
 __all__ = ["PromoRepository"]

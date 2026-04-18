@@ -1,3 +1,3 @@
-from api.service.address import AddressService
+from api.addresses.service import AddressService
 
 __all__ = ["AddressService"]

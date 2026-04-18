@@ -1,3 +1,3 @@
-from api.controller.address import router
+from api.addresses.router import router
 
 __all__ = ["router"]

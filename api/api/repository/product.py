@@ -1,3 +1,3 @@
-from api.repository.product import ProductRepository
+from api.products.repository import ProductRepository
 
 __all__ = ["ProductRepository"]

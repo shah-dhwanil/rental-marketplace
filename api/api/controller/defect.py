@@ -1,3 +1,3 @@
-from api.controller.defect import router
+from api.defects.router import router
 
 __all__ = ["router"]

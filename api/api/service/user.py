@@ -1,3 +1,3 @@
-from api.service.user import UserService
+from api.users.service import UserService
 
 __all__ = ["UserService"]

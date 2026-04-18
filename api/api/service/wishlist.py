@@ -1,3 +1,3 @@
-from api.service.wishlist import WishlistService
+from api.wishlists.service import WishlistService
 
 __all__ = ["WishlistService"]

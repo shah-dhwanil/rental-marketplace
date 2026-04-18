@@ -1,3 +1,3 @@
-from api.repository.defect import DefectRepository
+from api.defects.repository import DefectRepository
 
 __all__ = ["DefectRepository"]

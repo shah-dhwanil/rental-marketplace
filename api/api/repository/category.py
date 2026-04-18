@@ -1,3 +1,3 @@
-from api.repository.category import CategoryRepository
+from api.categories.repository import CategoryRepository
 
 __all__ = ["CategoryRepository"]

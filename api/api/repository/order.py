@@ -1,3 +1,3 @@
-from api.repository.order import OrderRepository
+from api.orders.repository import OrderRepository
 
 __all__ = ["OrderRepository"]

@@ -1,3 +1,3 @@
-from api.service.payment import PaymentMethodService
+from api.payments.service import PaymentMethodService
 
 __all__ = ["PaymentMethodService"]

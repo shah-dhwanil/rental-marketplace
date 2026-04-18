@@ -1,3 +1,3 @@
-from api.controller.order import router
+from api.orders.router import router
 
 __all__ = ["router"]

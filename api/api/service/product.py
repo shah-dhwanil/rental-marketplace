@@ -1,3 +1,3 @@
-from api.service.product import ProductService
+from api.products.service import ProductService
 
 __all__ = ["ProductService"]

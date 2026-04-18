@@ -1,3 +1,3 @@
-from api.repository.review import ReviewRepository
+from api.reviews.repository import ReviewRepository
 
 __all__ = ["ReviewRepository"]

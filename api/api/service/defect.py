@@ -1,3 +1,3 @@
-from api.service.defect import DefectService
+from api.defects.service import DefectService
 
 __all__ = ["DefectService"]

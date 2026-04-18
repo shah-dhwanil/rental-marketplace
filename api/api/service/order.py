@@ -1,3 +1,3 @@
-from api.service.order import OrderService
+from api.orders.service import OrderService
 
 __all__ = ["OrderService"]

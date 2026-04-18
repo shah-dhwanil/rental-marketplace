@@ -1,3 +1,3 @@
-from api.repository.wishlist import WishlistRepository
+from api.wishlists.repository import WishlistRepository
 
 __all__ = ["WishlistRepository"]

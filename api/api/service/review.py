@@ -1,3 +1,3 @@
-from api.service.review import ReviewService
+from api.reviews.service import ReviewService
 
 __all__ = ["ReviewService"]
