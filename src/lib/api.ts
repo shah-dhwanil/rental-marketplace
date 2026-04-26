@@ -3,7 +3,7 @@
  * All API calls go through this helper for consistent error handling.
  */
 
-export const API_BASE = "https://legendary-space-winner-46p9j759g7qh757-8000.app.github.dev/api/v1";
+export const API_BASE = "https://rentalbackend-production-3bdc.up.railway.app/api/v1"; // Update this to your actual backend URL or use env variable
 
 export class ApiError extends Error {
   constructor(
