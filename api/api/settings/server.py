@@ -77,6 +77,19 @@ class ServerConfig(BaseSettings):
         description="Rate limit per minute per IP",
     )
 
+    RATE_LIMIT_AUTH: str = Field(
+        default="10/minute",
+        description="Rate limit for authentication endpoints",
+    )
+    RATE_LIMIT_PRODUCT_SEARCH: str = Field(
+        default="60/minute",
+        description="Rate limit for product search/list endpoint",
+    )
+    RATE_LIMIT_PAYMENT: str = Field(
+        default="20/minute",
+        description="Rate limit for payment endpoints",
+    )
+
     model_config = SettingsConfigDict(case_sensitive=False, extra="forbid")
 
     @field_validator("PORT")

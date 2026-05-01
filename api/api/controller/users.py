@@ -4,7 +4,7 @@ Users router — all HTTP endpoints for the users domain.
 
 from typing import Optional, Union
 
-from fastapi import APIRouter, File, Query, UploadFile, status
+from fastapi import APIRouter, File, Query, Request, UploadFile, status
 
 from api.models.pagination import PaginatedResponse
 from api.dependencies.users import AdminDep, CurrentUserDep, TempTokenDep, UserServiceDep
@@ -29,6 +29,8 @@ from api.models.users import (
     TokenResponse,
     UserSummaryResponse,
 )
+from api.rate_limit import limiter
+from api.settings import get_settings
 
 router = APIRouter(prefix="/api/v1/users", tags=["Users"])
 
@@ -115,12 +117,14 @@ async def dp_step3(
 # ---------------------------------------------------------------------------
 
 @router.post("/auth/login", response_model=Union[TokenResponse, TempTokenResponse], summary="Login")
-async def login(body: LoginRequest, service: UserServiceDep):
+@limiter.limit(lambda: get_settings().SERVER.RATE_LIMIT_AUTH)
+async def login(request: Request, body: LoginRequest, service: UserServiceDep):
     return await service.login(body)
 
 
 @router.post("/auth/refresh", summary="Refresh access token")
-async def refresh(body: RefreshRequest, service: UserServiceDep):
+@limiter.limit(lambda: get_settings().SERVER.RATE_LIMIT_AUTH)
+async def refresh(request: Request, body: RefreshRequest, service: UserServiceDep):
     return await service.refresh_token(body.refresh_token)
 
 

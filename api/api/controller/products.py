@@ -3,7 +3,7 @@
 from datetime import date
 from typing import Optional
 
-from fastapi import APIRouter, File, Query, UploadFile, status
+from fastapi import APIRouter, File, Query, Request, UploadFile, status
 
 from api.models.pagination import PaginatedResponse
 from api.dependencies.products import ProductServiceDep, VendorDep, VendorOrAdminDep
@@ -21,6 +21,7 @@ from api.models.products import (
     ProductSummaryResponse,
 )
 from api.settings.settings import get_settings
+from api.rate_limit import limiter
 
 router = APIRouter(tags=["Products & Devices"])
 
@@ -34,7 +35,9 @@ router = APIRouter(tags=["Products & Devices"])
     response_model=PaginatedResponse[ProductSummaryResponse],
     summary="List products (public)",
 )
+@limiter.limit(lambda: get_settings().SERVER.RATE_LIMIT_PRODUCT_SEARCH)
 async def list_products(
+    request: Request,
     service: ProductServiceDep,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
