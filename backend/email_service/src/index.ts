@@ -12,12 +12,62 @@ import {
   resolveAttachments,
 } from "./attachments/resolver";
 import { findById, insertEmailHistory } from "./database/history";
+import { getRateLimitConfig } from "./rateLimit";
 
 // RFC 4122 UUID (any version)
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const app = new Hono();
+
+// ---------------------------------------------------------------------------
+// Rate limiting (configurable via env)
+// ---------------------------------------------------------------------------
+
+const rateLimitConfig = getRateLimitConfig();
+
+type RateLimitEntry = {
+  count: number;
+  resetAtMs: number;
+};
+
+const rateLimitBuckets = new Map<string, RateLimitEntry>();
+
+const getClientKey = (c: any) => {
+  const forwardedFor = c.req.header("x-forwarded-for");
+  if (forwardedFor) {
+    return forwardedFor.split(",")[0]!.trim();
+  }
+  const realIp = c.req.header("x-real-ip");
+  if (realIp) return realIp.trim();
+  return "unknown";
+};
+
+app.use("*", async (c, next) => {
+  if (!rateLimitConfig.enabled) return next();
+
+  const windowMs = rateLimitConfig.windowSeconds * 1000;
+  const now = Date.now();
+  const key = `${getClientKey(c)}:${c.req.path}`;
+
+  const current = rateLimitBuckets.get(key);
+  if (!current || current.resetAtMs <= now) {
+    rateLimitBuckets.set(key, { count: 1, resetAtMs: now + windowMs });
+    return next();
+  }
+
+  if (current.count >= rateLimitConfig.maxRequests) {
+    const retryAfterSeconds = Math.max(
+      1,
+      Math.ceil((current.resetAtMs - now) / 1000)
+    );
+    c.header("Retry-After", String(retryAfterSeconds));
+    return c.json({ error: "Rate limit exceeded" }, 429);
+  }
+
+  current.count += 1;
+  return next();
+});
 
 // ---------------------------------------------------------------------------
 // Request schema
