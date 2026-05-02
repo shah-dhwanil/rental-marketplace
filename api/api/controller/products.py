@@ -4,6 +4,7 @@ from datetime import date
 from typing import Optional
 
 from fastapi import APIRouter, File, Query, Request, UploadFile, status
+from fastapi_cache.decorator import cache
 
 from api.models.pagination import PaginatedResponse
 from api.dependencies.products import ProductServiceDep, VendorDep, VendorOrAdminDep
@@ -36,6 +37,7 @@ router = APIRouter(tags=["Products & Devices"])
     summary="List products (public)",
 )
 @limiter.limit(lambda: get_settings().SERVER.RATE_LIMIT_PRODUCT_SEARCH)
+@cache(expire=60)
 async def list_products(
     request: Request,
     service: ProductServiceDep,
