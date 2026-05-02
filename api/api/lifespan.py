@@ -19,7 +19,6 @@ from api.settings import get_settings
 from api.database import close_db_pool, init_db_pool
 from api.logging import setup_logging
 from api.cloudinary import init_cloudinary
-from api.cache import products_search_key_builder
 
 logger = structlog.get_logger(__name__)
 
@@ -55,7 +54,7 @@ async def lifespan(app: FastAPI):
         init_cloudinary(settings.CLOUDINARY)
 
         # Initialize cache backend (in-memory)
-        FastAPICache.init(InMemoryBackend(), key_builder=products_search_key_builder)
+        FastAPICache.init(InMemoryBackend())
 
         # Log database pool statistics
         pool_stats = await db_pool.get_pool_stats()
