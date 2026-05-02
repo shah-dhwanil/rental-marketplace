@@ -27,6 +27,11 @@ request_timeout = 60
 rate_limit_enabled = false
 rate_limit_per_minute = 60
 
+# Per-endpoint limits (SlowAPI format)
+rate_limit_auth = "10/minute"
+rate_limit_product_search = "60/minute"
+rate_limit_payment = "20/minute"
+
 # -----------------------------------------------------------------------------
 # PostgreSQL database settings (DatabaseConfig)
 # -----------------------------------------------------------------------------
