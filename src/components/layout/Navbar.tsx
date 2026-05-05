@@ -60,6 +60,9 @@ export function Navbar() {
 
   // Apply theme on mount
   useEffect(() => {
+    // console.log("Location from store:", location);
+    // setTempLocation(location);
+    // handleLocationChange();
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
@@ -86,12 +89,13 @@ export function Navbar() {
   const isListingPage = pathname === '/search' || pathname.startsWith('/category/');
 
   const handleLocationChange = async () => {
-    if (!tempLocation.trim()) return;
     setLocationLoading(true);
     setLocation(tempLocation.trim());
     try {
       const results = await searchPlaces(tempLocation.trim());
+      console.log("Geocoding results for", tempLocation, results);
       if (results.length) {
+        console.log("Setting coords to", results[0].lat, results[0].lng);
         const { lat: newLat, lng: newLng } = results[0];
         setCoords(newLat, newLng);
         if (isListingPage) {
@@ -101,6 +105,17 @@ export function Navbar() {
           sp.set('pincode', tempLocation.trim());
           setSearchParams(sp);
         }
+      }else{
+        // If geocoding fails, still update location but clear coords
+        setCoords(null, null);
+        if (isListingPage) {
+          const sp = new URLSearchParams(searchParams);
+          sp.delete('lat');
+          sp.delete('lng');
+          sp.delete('pincode');
+          setSearchParams(sp);
+        }
+
       }
     } catch {
       // geocoding failed silently
@@ -121,6 +136,17 @@ export function Navbar() {
       }
     }
   };
+  const handleRentalDatesClear = () => {
+    setDates("", "");
+    setRentalPopoverOpen(false);
+    if (isListingPage) {
+      const sp = new URLSearchParams(searchParams);
+      sp.delete('start_date');
+      sp.delete('end_date');
+      setSearchParams(sp);
+    }
+  };
+
 
   const handleSearchSubmit = () => {
     if (!query.trim()) return;
@@ -327,6 +353,9 @@ export function Navbar() {
                     )}
                     <Button size="sm" className="w-full mt-2 dark:bg-purple-700 dark:hover:bg-purple-600" onClick={handleRentalDatesApply}>
                       Apply Dates
+                    </Button>
+                    <Button size="sm" className="w-full mt-2 dark:bg-purple-700 dark:hover:bg-purple-600" onClick={handleRentalDatesClear}>
+                      Clear Dates
                     </Button>
                   </div>
                 </div>

@@ -39,7 +39,7 @@ router = APIRouter(tags=["Products & Devices"])
     summary="List products (public)",
 )
 @limiter.limit(lambda: get_settings().SERVER.RATE_LIMIT_PRODUCT_SEARCH)
-@cache(expire=60, key_builder=products_search_key_builder)
+@cache(expire=600, key_builder=products_search_key_builder)
 async def list_products(
     request: Request,
     service: ProductServiceDep,

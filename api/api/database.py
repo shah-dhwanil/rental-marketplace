@@ -49,7 +49,7 @@ class DatabasePool:
         return shapely.wkb.loads(wkb)
     async def init_connection(self, connection: asyncpg.Connection):
         # Register pgvector type
-        await register_vector(connection,"public")
+        await register_vector(connection,"rental")
 
         # Register geometry types
         await connection.set_type_codec(
