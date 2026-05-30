@@ -148,25 +148,9 @@ export function Home() {
                       </div>
                       <Button
                         size="sm"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          addToCart({
-                            productId: item.id,
-                            productName: item.name,
-                            productImage: item.image_urls?.[0] || "",
-                            startDate: startDate || today,
-                            endDate: endDate || oneWeekLater,
-                            dailyRate: item.price_day,
-                            totalDays: days,
-                            deposit: 0,
-                            deliveryMethod: "pickup",
-                            deliveryFee: 0,
-                          });
-                          console.log("🛒 Added to cart:", item.name);
-                        }}
                         className="h-9 bg-primary hover:bg-purple-700 text-white shadow-md shadow-purple-500/20 px-4 rounded-lg font-semibold"
                       >
-                        Add to Cart
+                        <Link to={`/product/${item.id}`}>View Details</Link>
                       </Button>
                     </div>
                   </CardContent>

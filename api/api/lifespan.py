@@ -11,6 +11,8 @@ from contextlib import asynccontextmanager
 
 import structlog
 from fastapi import FastAPI
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.inmemory import InMemoryBackend
 
 from api.sentry import setup_sentry
 from api.settings import get_settings
@@ -50,6 +52,9 @@ async def lifespan(app: FastAPI):
 
         # Initialize Cloudinary client
         init_cloudinary(settings.CLOUDINARY)
+
+        # Initialize cache backend (in-memory)
+        FastAPICache.init(InMemoryBackend())
 
         # Log database pool statistics
         pool_stats = await db_pool.get_pool_stats()

@@ -51,8 +51,8 @@ export function ProductDetailPage() {
   // Derive a default date range if store is empty
   const today = new Date().toISOString().split("T")[0];
   const oneWeekLater = new Date(Date.now() + 7 * 86400000).toISOString().split("T")[0];
-  const effectiveStart = startDate || today;
-  const effectiveEnd = endDate || oneWeekLater;
+  const effectiveStart = startDate;
+  const effectiveEnd = endDate;
 
   // Fetch vendor info on mount
   useEffect(() => {
@@ -74,13 +74,19 @@ export function ProductDetailPage() {
       .finally(() => setPriceLoading(false));
   }, [product.id, effectiveStart, effectiveEnd]);
 
+
   // Pricing from API or fallback to daily rate
-  const days = getDays() || 7;
+  const days = getDays();
   const rentalCost = priceCalc?.rental_amount ?? (product.price_day ?? 0) * days;
   const deposit = product.security_deposit ?? 0;
   const totalCost = rentalCost + deposit;
   const pricingLabel = priceCalc?.pricing_tier ? priceCalc.pricing_tier.charAt(0).toUpperCase() + priceCalc.pricing_tier.slice(1) : "Daily";
   const pricingBreakdown = priceCalc?.breakdown ?? `${days}d × ₹${product.price_day ?? 0}`;
+
+  // useEffect(() => {
+  //   setStartDate(effectiveStart);
+  //   setEndDate(effectiveEnd);
+  // },[]); 
 
   const handleBookNow = () => {
     // Navigate to checkout with rental details as URL parameters
@@ -339,7 +345,7 @@ export function ProductDetailPage() {
                         <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">Start Date</label>
                         <Input
                           type="date"
-                          value={startDate || today}
+                          value={startDate}
                           min={today}
                           onChange={(e) => setStartDate(e.target.value)}
                           className="h-9"
@@ -349,7 +355,7 @@ export function ProductDetailPage() {
                         <label className="text-xs font-semibold text-slate-600 dark:text-slate-400 block mb-1">End Date</label>
                         <Input
                           type="date"
-                          value={endDate || oneWeekLater}
+                          value={endDate}
                           min={startDate || today}
                           onChange={(e) => setEndDate(e.target.value)}
                           className="h-9"
@@ -399,18 +405,18 @@ export function ProductDetailPage() {
                   <Button
                     onClick={handleBookNow}
                     className="w-full bg-primary hover:bg-purple-700 text-white py-3 font-bold text-base"
-                    disabled={priceLoading}
+                    disabled={priceLoading||days === 0}
                   >
                     {priceLoading ? "Calculating..." : "Proceed to Checkout"}
                   </Button>
-                  <Button
+                  {/* <Button
                     onClick={() => toggleWishlist(product.id)}
                     variant="outline"
                     className="w-full border-slate-200 dark:border-slate-700"
                   >
                     <Heart className={`h-4 w-4 mr-2 ${isInWishlist(product.id) ? "fill-red-500 text-red-500" : ""}`} />
                     {isInWishlist(product.id) ? "Saved to Wishlist" : "Add to Wishlist"}
-                  </Button>
+                  </Button> */}
                 </div>
 
                 {/* Protection notice */}
@@ -549,7 +555,6 @@ export function ProductDetailPage() {
               )}
             </CardHeader>
             <CardContent>
-              {console.log("Reviews data:", reviews)}
               {reviews.length === 0 ? (
                 <p className="text-sm text-slate-500 dark:text-slate-400">No reviews yet. Be the first to review!</p>
             ) : (

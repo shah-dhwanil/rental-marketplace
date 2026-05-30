@@ -24,10 +24,10 @@ export const useRentalDatesStore = create<RentalDatesState>()(
 
       getDays: () => {
         const { startDate, endDate } = get();
-        if (!startDate || !endDate) return 1;
+        if (!startDate || !endDate) return 0;
         const start = new Date(startDate);
         const end = new Date(endDate);
-        const diffMs = end.getTime() - start.getTime();
+        const diffMs = end.getTime() - start.getTime()+1;
         const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
         return days > 0 ? days : 1;
       },

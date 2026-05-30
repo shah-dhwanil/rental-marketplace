@@ -8,21 +8,25 @@ middleware, and lifespan management for database and logging setup.
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi import _rate_limit_exceeded_handler
 from api.exceptions.handler import register_exception_handlers
 from api.lifespan import lifespan
 from api.middleware import ContextMiddleware, LoggingMiddleware, RequestIDMiddleware
 from api.models.errors import HTTPException
 from api.settings import get_settings
-from api.users.router import router as users_router
-from api.categories.router import router as categories_router
-from api.products.router import router as products_router
-from api.addresses.router import router as addresses_router
-from api.payments.router import router as payments_router
-from api.promos.router import router as promos_router
-from api.wishlists.router import router as wishlists_router
-from api.orders.router import router as orders_router
-from api.reviews.router import router as reviews_router
-from api.defects.router import router as defects_router
+from api.controller.users import router as users_router
+from api.controller.categories import router as categories_router
+from api.controller.products import router as products_router
+from api.controller.addresses import router as addresses_router
+from api.controller.payments import router as payments_router
+from api.controller.promos import router as promos_router
+from api.controller.wishlists import router as wishlists_router
+from api.controller.orders import router as orders_router
+from api.controller.reviews import router as reviews_router
+from api.controller.defects import router as defects_router
+from api.rate_limit import limiter
 
 # Load settings
 settings = get_settings()
@@ -49,7 +53,15 @@ def create_app() -> FastAPI:
             422: {"model": HTTPException, "description": "Unprocessable Entity"},
         },
     )
+
+    # SlowAPI (rate limiting)
+    # Routes can opt-in using the limiter decorator.
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     register_exception_handlers(app)
+
+    if settings.SERVER.RATE_LIMIT_ENABLED:
+        app.add_middleware(SlowAPIMiddleware)
     # Configure CORS middleware
     if settings.SERVER.CORS_ENABLED:
         app.add_middleware(
